@@ -1,0 +1,5 @@
+/* src/style.css */
+*{box-sizing:border-box}
+html,body,#app{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111;background:#fff}
+a{text-decoration:none;color:inherit}
