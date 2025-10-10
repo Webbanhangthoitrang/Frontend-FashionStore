@@ -141,10 +141,12 @@ function handleLogin() {
 }
 
 .title {
-  font-size: 26px;
-  font-weight: 800;
-  color: #000;
-  margin: 0 0 6px 0;
+  text-align: left;
+  font-family: "Khula", sans-serif;
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .subtitle {

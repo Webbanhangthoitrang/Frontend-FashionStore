@@ -4,7 +4,6 @@
       <!-- Logo -->
       <div class="header__left">
         <img src="../../assets/logo.png" alt="Logo" class="header__logo" />
-
       </div>
 
       <!-- Search -->
@@ -41,33 +40,20 @@
           <span class="header__sep"></span>
           <router-link to="/login" class="header__link">Đăng nhập</router-link>
         </nav>
-        <button class="header__cart" aria-label="Giỏ hàng">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="header__icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="9" cy="21" r="1" />
-            <circle cx="20" cy="21" r="1" />
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-          </svg>
-        </button>
+       
       </div>
     </div>
 
-    <!-- Danh mục menu -->
+    <!-- Dòng menu danh mục -->
     <div class="header__menu">
-      <ul class="menu__list">
-        <li><a href="#" class="menu__link">Váy</a></li>
-        <li><a href="#" class="menu__link">Áo</a></li>
-        <li><a href="#" class="menu__link">Quần</a></li>
-        <li><a href="#" class="menu__link">Best seller</a></li>
-      </ul>
+      <div class="header__menu-inner">
+        <ul class="menu__list">
+          <li><a href="#" class="menu__link">Váy</a></li>
+          <li><a href="#" class="menu__link">Áo</a></li>
+          <li><a href="#" class="menu__link">Quần</a></li>
+          <li><a href="#" class="menu__link">Best seller</a></li>
+        </ul>
+      </div>
     </div>
   </header>
 </template>
@@ -82,18 +68,20 @@ function onSearch() {
 </script>
 
 <style scoped>
+/* ========= Biến dùng canh ô search ========= */
+.header { --search-max: 700px; }
 
 /* Tổng thể header */
 .header {
   background-color: #4C80E6;
-  color: var(--white);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #fff;
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Container chính */
+/* Container dòng trên (logo - search - auth/cart) */
 .header__container {
   display: flex;
   align-items: center;
@@ -105,6 +93,7 @@ function onSearch() {
 }
 
 /* Logo */
+.header__left { display: flex; align-items: center; }
 .header__logo {
   height: 50px;
   width: auto;
@@ -112,37 +101,31 @@ function onSearch() {
   object-fit: contain;
 }
 
-/* Ô tìm kiếm */
+/* Ô tìm kiếm (căn giữa theo container) */
 .header__center {
   flex: 1;
   display: flex;
   justify-content: center;
 }
-
 .header__search {
   display: flex;
   align-items: center;
-  background-color: white;
+  background-color: #fff;
   border-radius: 6px;
   overflow: hidden;
   width: 100%;
-  max-width: 700px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  max-width: var(--search-max);
+  border: 1px solid rgba(0,0,0,0.1);
 }
-
 .header__input {
   flex: 1;
   padding: 10px 14px;
   border: none;
   outline: none;
   font-size: 15px;
-  color: var(--text);
+  color: #111827;
 }
-
-.header__input::placeholder {
-  color: #a0a0a0;
-}
-
+.header__input::placeholder { color: #a0a0a0; }
 .header__search-btn {
   border: none;
   background: none;
@@ -150,70 +133,68 @@ function onSearch() {
   cursor: pointer;
   color: #555;
 }
+.header__icon { width: 22px; height: 22px; }
 
-.header__icon {
-  width: 22px;
-  height: 22px;
-}
-
-/* Auth và giỏ hàng */
+/* Auth + Cart */
 .header__right {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-
 .header__auth {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .header__link {
-  color: white;
+  color: #fff;
   font-weight: 600;
   text-decoration: none;
 }
-
-.header__link:hover {
-  text-decoration: underline;
-}
-
+.header__link:hover { text-decoration: underline; }
 .header__sep {
   height: 18px;
-  border-left: 1px solid rgba(255, 255, 255, 0.8);
+  border-left: 1px solid rgba(255,255,255,0.8);
 }
 
-.header__cart {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: white;
-}
 
-/* Menu danh mục */
+/* ========= Dòng menu dưới ========= */
 .header__menu {
-  display: flex;
-  justify-content: center;
   background-color: #4C80E6;
   padding-bottom: 10px;
 }
+.header__menu-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
 
+/* Danh mục: căn TRÁI và thẳng mép trái với ô search bên trên */
 .menu__list {
   display: flex;
   gap: 24px;
   list-style: none;
   margin: 0;
   padding: 0;
-}
 
+  /* ⭐ Mấu chốt: đẩy list để mép trái trùng với mép trái ô search (ô search max 700px, căn giữa) */
+  margin-left: 170px;
+}
 .menu__link {
-  color: white;
+  color: #fff;
   font-weight: 700;
   text-decoration: none;
 }
+.menu__link:hover { text-decoration: underline; }
 
-.menu__link:hover {
-  text-decoration: underline;
+/* ========= Responsive nhỏ hơn 768px ========= */
+@media (max-width: 768px) {
+  .header__container { gap: 12px; }
+  .header__logo { height: 42px; }
+  .menu__list {
+    gap: 16px;
+    /* Khi màn hình nhỏ hơn --search-max, min(100%, --search-max) = 100% => margin-left = 0, tự căn trái */
+    margin-left: 0;
+  }
 }
 </style>

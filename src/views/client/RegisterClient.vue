@@ -212,6 +212,7 @@ export default {
 
 .title {
   text-align: left;
+  font-family: "Khula", sans-serif;
   margin-bottom: 30px;
   color: #333;
   font-size: 24px;

@@ -20,6 +20,14 @@
     </section>
 
     <!-- Gợi ý thêm -->
+     <!-- Gợi ý sản phẩm -->
+    <section class="product">
+      <h2 class="product__title">Gợi ý sản phẩm</h2>
+
+      <div class="product__grid">
+        <ProductCard v-for="p in products" :key="p.id" :product="p" />
+      </div>
+    </section>
     <div class="more-btn">
       <button>Gợi ý thêm sản phẩm</button>
     </div>
@@ -30,7 +38,7 @@
 </template>
 
 <script setup>
-import ClientHeader from "../../components/client/ClientHeader.vue";
+import ClientHeader from "../../components/client/ClientHeaderLogged.vue";
 import ClientFooter from "../../components/client/ClientFooter.vue";
 
 // icon danh mục (đường dẫn tương đối)
@@ -49,6 +57,22 @@ const categories = [
   { name: "Áo khoác", icon: aokhoac },
   { name: "Sale", icon: sale },
 ];
+
+// sản phẩm
+import ProductCard from '../../components/client/ProductCard.vue'
+
+// Ảnh sản phẩm mẫu
+import sp1 from '../../assets/image1.png'
+import sp2 from '../../assets/image2.png'
+import sp3 from '../../assets/image3.png'
+
+// Danh sách sản phẩm demo
+const products = [
+  { id: 1, name: 'Chân váy điều chỉ cạp bông', price: 425000, image: sp1 },
+  { id: 2, name: 'Áo sơ mi cổ Đức, khăn choàng', price: 425000, image: sp2 },
+  { id: 3, name: 'Áo dáng ôm', price: 425000, image: sp3 },
+  { id: 4, name: 'Chân váy dáng chữ A', price: 425000, image: sp1 }
+]
 </script>
 
 <style scoped>
@@ -168,4 +192,29 @@ const categories = [
 footer {
   margin-top: auto;
 }
+.product{
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 32px;    /* ít hơn để nhìn thoáng */
+}
+.product__title{
+  font-family: 'Khula', sans-serif;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #000;
+  margin-top: 40px;
+  margin-bottom: 28px;
+  letter-spacing: 0.3px;
+}
+.product__grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;          /* khoảng cách đều nhau */
+  align-items: stretch;
+}
+@media (max-width: 1200px){ .product__grid{ grid-template-columns: repeat(3,1fr);} }
+@media (max-width: 900px){  .product__grid{ grid-template-columns: repeat(2,1fr);} }
+@media (max-width: 520px){  .product__grid{ grid-template-columns: 1fr; } }
+
 </style>

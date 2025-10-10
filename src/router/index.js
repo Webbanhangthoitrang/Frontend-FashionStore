@@ -20,7 +20,35 @@ const routes = [
     path: '/login',             
     name: 'login',
     component: LoginClient
-  }
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/client/ForgotPassword.vue')
+  },
+  {
+  path: '/verify-code',
+  name: 'VerifyCode',
+  component: () => import('../views/client/VerifyCode.vue')
+},
+{
+  path: '/reset-password',
+  name: 'ResetPassword',
+  component: () => import('../views/client/ResetPassword.vue')
+},
+{
+  path: '/product/:id',
+  name: 'ProductDetail',
+  component: () => import('../views/client/ProductDetail.vue'),
+  props: true, // truyền id thành prop
+},
+{
+  path: '/account/profile',
+  name: 'AccountProfile',
+  component: () => import('../views/client/AccountProfile.vue')
+}
+
+
 ]
 
 const router = createRouter({
