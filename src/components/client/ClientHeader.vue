@@ -3,7 +3,9 @@
     <div class="header__container">
       <!-- Logo -->
       <div class="header__left">
-        <img src="../../assets/logo.png" alt="Logo" class="header__logo" />
+        <router-link to="/" class="header__logo-link" aria-label="Trang chủ">
+          <img src="../../assets/logo.png" alt="Logo" class="header__logo" />
+        </router-link>
       </div>
 
       <!-- Search -->
@@ -94,6 +96,7 @@ function onSearch() {
 
 /* Logo */
 .header__left { display: flex; align-items: center; }
+.header__logo-link { display: inline-flex; }
 .header__logo {
   height: 50px;
   width: auto;

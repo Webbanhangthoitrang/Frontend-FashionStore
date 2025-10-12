@@ -11,8 +11,14 @@
     <!-- Danh mục -->
     <section class="category">
       <h2 class="category__title">Danh mục</h2>
-      <div class="category__list">
-        <div v-for="item in categories" :key="item.name" class="category__item">
+      <div v-if="categoryLoading" class="state">Đang tải danh mục…</div>
+      <div v-else-if="categories.length === 0" class="state">Chưa có danh mục nào.</div>
+      <div v-else class="category__list">
+        <div
+          v-for="item in categories"
+          :key="item.id || item.name"
+          class="category__item"
+        >
           <img :src="item.icon" :alt="item.name" class="category__icon" />
           <p class="category__name">{{ item.name }}</p>
         </div>
@@ -22,9 +28,15 @@
     <!-- Gợi ý thêm -->
      <!-- Gợi ý sản phẩm -->
     <section class="product">
-      <h2 class="product__title">Gợi ý sản phẩm</h2>
+      <h2 class="product__title">
+        {{ searchTerm ? `Kết quả tìm kiếm cho "${searchTerm}"` : 'Gợi ý sản phẩm' }}
+      </h2>
 
-      <div class="product__grid">
+      <div v-if="productLoading" class="state">Đang tải sản phẩm…</div>
+      <div v-else-if="products.length === 0" class="state">
+        {{ searchTerm ? 'Không tìm thấy sản phẩm phù hợp.' : 'Không có sản phẩm để hiển thị.' }}
+      </div>
+      <div v-else class="product__grid">
         <ProductCard v-for="p in products" :key="p.id" :product="p" />
       </div>
     </section>
@@ -38,10 +50,13 @@
 </template>
 
 <script setup>
+import { ref, onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
 import ClientHeader from "../../components/client/ClientHeaderLogged.vue";
 import ClientFooter from "../../components/client/ClientFooter.vue";
-
-// icon danh mục (đường dẫn tương đối)
+import ProductCard from "../../components/client/ProductCard.vue";
+import { getCategories } from "../../services/categoryService";
+import { getProducts } from "../../services/productService";
 import dam from "../../assets/dam.png";
 import ao from "../../assets/ao.png";
 import quan from "../../assets/quan.png";
@@ -49,30 +64,71 @@ import chanvay from "../../assets/chanvay.png";
 import aokhoac from "../../assets/aokhoac.png";
 import sale from "../../assets/sale.png";
 
-const categories = [
-  { name: "Đầm", icon: dam },
-  { name: "Áo", icon: ao },
-  { name: "Quần", icon: quan },
-  { name: "Chân váy", icon: chanvay },
-  { name: "Áo khoác", icon: aokhoac },
-  { name: "Sale", icon: sale },
-];
+const categories = ref([]);
+const categoryLoading = ref(false);
+const products = ref([]);
+const productLoading = ref(false);
+const route = useRoute();
+const searchTerm = ref("");
 
-// sản phẩm
-import ProductCard from '../../components/client/ProductCard.vue'
+const iconMap = {
+  "Đầm": dam,
+  "Váy": dam,
+  "Áo": ao,
+  "Quần": quan,
+  "Chân váy": chanvay,
+  "Áo khoác": aokhoac,
+  Sale: sale,
+};
 
-// Ảnh sản phẩm mẫu
-import sp1 from '../../assets/image1.png'
-import sp2 from '../../assets/image2.png'
-import sp3 from '../../assets/image3.png'
+async function fetchCategories() {
+  categoryLoading.value = true;
+  try {
+    const data = await getCategories();
+    categories.value = data.map((item) => ({
+      ...item,
+      icon: iconMap[item.name] || sale,
+    }));
+  } catch (error) {
+    console.error("Không tải được danh mục", error);
+    categories.value = [];
+  } finally {
+    categoryLoading.value = false;
+  }
+}
 
-// Danh sách sản phẩm demo
-const products = [
-  { id: 1, name: 'Chân váy điều chỉ cạp bông', price: 425000, image: sp1 },
-  { id: 2, name: 'Áo sơ mi cổ Đức, khăn choàng', price: 425000, image: sp2 },
-  { id: 3, name: 'Áo dáng ôm', price: 425000, image: sp3 },
-  { id: 4, name: 'Chân váy dáng chữ A', price: 425000, image: sp1 }
-]
+async function fetchProducts(params = {}) {
+  productLoading.value = true;
+  try {
+    const payload = { limit: 12, ...params };
+    if (!payload.q) {
+      delete payload.q;
+    }
+    const data = await getProducts(payload);
+    products.value = data.items;
+  } catch (error) {
+    console.error("Không tải được sản phẩm", error);
+    products.value = [];
+  } finally {
+    productLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  fetchCategories();
+  const initial = route.query.q ? route.query.q.toString() : "";
+  searchTerm.value = initial;
+  fetchProducts({ q: initial });
+});
+
+watch(
+  () => route.query.q,
+  (value) => {
+    const term = value ? value.toString() : "";
+    searchTerm.value = term;
+    fetchProducts({ q: term });
+  }
+);
 </script>
 
 <style scoped>
@@ -216,5 +272,14 @@ footer {
 @media (max-width: 1200px){ .product__grid{ grid-template-columns: repeat(3,1fr);} }
 @media (max-width: 900px){  .product__grid{ grid-template-columns: repeat(2,1fr);} }
 @media (max-width: 520px){  .product__grid{ grid-template-columns: 1fr; } }
+
+.state {
+  text-align: center;
+  color: #4b5563;
+  padding: 24px 0;
+}
+.state--error {
+  color: #b91c1c;
+}
 
 </style>

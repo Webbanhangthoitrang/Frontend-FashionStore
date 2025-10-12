@@ -8,6 +8,8 @@
       <h2 class="title">Đăng ký</h2>
 
       <form class="form" @submit.prevent="handleRegister">
+        <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="form__success">{{ successMessage }}</p>
         <!-- Tên đăng nhập -->
         <div class="form-group">
           <label for="username">Tên đăng nhập</label>
@@ -132,7 +134,10 @@
 
         <!-- Nút hành động -->
         <div class="form-actions">
-          <button type="submit" class="btn-submit">Đăng ký</button>
+          <button type="submit" class="btn-submit" :disabled="loading">
+            <span v-if="loading">Đang đăng ký...</span>
+            <span v-else>Đăng ký</span>
+          </button>
           <button type="button" class="btn-login" @click="goToLogin">Đăng nhập</button>
         </div>
       </form>
@@ -140,40 +145,79 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'RegisterPage',
-  data() {
-    return {
-      formData: {
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-      },
-      showPassword: false,
-      showConfirmPassword: false
-    }
-  },
-  methods: {
-    handleRegister() {
-      // Kiểm tra mật khẩu trùng khớp
-      if (this.formData.password !== this.formData.confirmPassword) {
-        alert('Mật khẩu xác nhận không khớp!');
-        return;
-      }
+<script setup>
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { register } from '../../services/authService'
+import { useAuthStore } from '../../stores/auth'
 
-      // Xử lý đăng ký
-      console.log('Thông tin đăng ký:', this.formData);
-      
-      // Gọi API đăng ký ở đây
-      // this.$api.post('/register', this.formData)
-    },
-    // METHOD MỚI - ĐIỀU HƯỚNG SANG TRANG ĐĂNG NHẬP
-    goToLogin() {
-      this.$router.push('/login');
-    }
+const router = useRouter()
+const { setAuth, setStatus, setError } = useAuthStore()
+
+const formData = reactive({
+  username: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+})
+
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const loading = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
+
+async function handleRegister() {
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  if (formData.password !== formData.confirmPassword) {
+    errorMessage.value = 'Mật khẩu xác nhận không khớp.'
+    return
   }
+
+  loading.value = true
+  setStatus('loading')
+  setError(null)
+
+  try {
+    const payload = {
+      name: formData.username.trim(),
+      fullName: formData.username.trim(),
+      email: formData.email.trim().toLowerCase(),
+      password: formData.password,
+    }
+
+    const response = await register(payload)
+    if (!response?.token) {
+      throw new Error('Không nhận được token sau khi đăng ký')
+    }
+
+    setAuth(response.token, response.user || {
+      id: response.user?.id || 0,
+      name: payload.name,
+      email: payload.email,
+      role: response.role,
+    })
+
+    setStatus('success')
+    successMessage.value = 'Đăng ký thành công! Chuyển sang trang chủ...'
+    setTimeout(() => {
+      router.push('/')
+    }, 800)
+  } catch (error) {
+    console.error('Đăng ký thất bại', error)
+    const message = error?.message || 'Đăng ký thất bại. Vui lòng thử lại.'
+    errorMessage.value = message
+    setError(message)
+    setStatus('error')
+  } finally {
+    loading.value = false
+  }
+}
+
+function goToLogin() {
+  router.push('/login')
 }
 </script>
 
@@ -302,6 +346,30 @@ input:focus {
 .btn-login:hover {
   color: #357abd;
   background: none;
+}
+
+.btn-submit:disabled {
+  background: #0f3099;
+  cursor: wait;
+  opacity: 0.9;
+}
+
+.form__error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.form__success {
+  background: #dcfce7;
+  color: #166534;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
 }
 
 /* Responsive */

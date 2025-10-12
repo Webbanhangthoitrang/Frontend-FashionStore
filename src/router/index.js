@@ -4,6 +4,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeClient from '../views/client/HomeClient.vue'
 import RegisterClient from '../views/client/RegisterClient.vue'
 import LoginClient from '../views/client/LoginClient.vue'  
+import CartPage from '../views/client/CartPage.vue'
+import Notifications from '../views/client/Notifications.vue'
 
 const routes = [
   {
@@ -17,9 +19,19 @@ const routes = [
     component: RegisterClient
   },
   {
+    path: '/cart',
+    name: 'cart',
+    component: CartPage
+  },
+  {
     path: '/login',             
     name: 'login',
     component: LoginClient
+  },
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: Notifications
   },
   {
     path: '/forgot-password',

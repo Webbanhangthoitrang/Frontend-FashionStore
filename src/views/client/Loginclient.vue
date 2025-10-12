@@ -6,18 +6,20 @@
     <!-- Khung đăng nhập -->
     <div class="form-box">
       <h2 class="title">Welcome back!</h2>
-      <p class="subtitle">Access using the provided account.</p>
+      <p class="subtitle">Đăng nhập bằng tài khoản đã đăng ký.</p>
 
       <form class="form" @submit.prevent="handleLogin">
-        <!-- Username -->
+        <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
+        <!-- Email -->
         <div class="field">
-          <label for="username">Tên đăng nhập</label>
+          <label for="email">Email</label>
           <input
-            id="username"
-            v-model="username"
-            type="text"
-            placeholder="Tên đăng nhập..."
+            id="email"
+            v-model="email"
+            type="email"
+            placeholder="Email..."
             required
+            autocomplete="email"
           />
         </div>
 
@@ -31,6 +33,7 @@
               :type="showPass ? 'text' : 'password'"
               placeholder="Mật khẩu..."
               required
+              autocomplete="current-password"
             />
             <button
               type="button"
@@ -74,14 +77,17 @@
         <div class="actions">
           <label class="remember">
             <input type="checkbox" v-model="remember" />
-            Nhớ mật khẩu
+            Ghi nhớ đăng nhập
           </label>
 
           <RouterLink to="/forgot-password" class="link">Quên mật khẩu</RouterLink>
         </div>
 
         <!-- Nút đăng nhập -->
-        <button type="submit" class="btn-login">Đăng nhập</button>
+        <button type="submit" class="btn-login" :disabled="loading">
+          <span v-if="loading">Đang đăng nhập...</span>
+          <span v-else>Đăng nhập</span>
+        </button>
 
         <!-- Đăng ký -->
         <div class="under">
@@ -94,16 +100,59 @@
 
 <script setup>
 import { ref } from "vue";
-import { RouterLink } from "vue-router";
+import { useRouter, RouterLink } from "vue-router";
 import bgImg from "../../assets/anhnen1.jpeg";
+import { login } from "../../services/authService";
+import { useAuthStore } from "../../stores/auth";
 
-const username = ref("");
+const router = useRouter();
+const { setAuth, setStatus, setError } = useAuthStore();
+
+const email = ref("");
 const password = ref("");
 const remember = ref(false);
 const showPass = ref(false);
+const loading = ref(false);
+const errorMessage = ref("");
 
-function handleLogin() {
-  console.log("Login with:", username.value, password.value, remember.value);
+async function handleLogin() {
+  errorMessage.value = "";
+  loading.value = true;
+  setStatus("loading");
+  setError(null);
+
+  try {
+    const payload = {
+      email: email.value.trim().toLowerCase(),
+      password: password.value,
+    };
+    const response = await login(payload);
+    if (!response?.token) {
+      throw new Error("Không nhận được token từ máy chủ");
+    }
+    const userPayload = response.user || {
+      id: 0,
+      name: response.role === "admin" ? "Admin" : email.value,
+      email: email.value,
+      role: response.role,
+    };
+    setAuth(response.token, userPayload);
+    if (remember.value) {
+      localStorage.setItem("authRemember", "1");
+    } else {
+      localStorage.removeItem("authRemember");
+    }
+    setStatus("success");
+    router.push("/");
+  } catch (error) {
+    console.error("Đăng nhập thất bại", error);
+    const message = error?.message || "Đăng nhập thất bại. Vui lòng thử lại.";
+    errorMessage.value = message;
+    setError(message);
+    setStatus("error");
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
@@ -138,6 +187,15 @@ function handleLogin() {
   border-radius: 16px;
   padding: 32px 36px;
   box-shadow: 0 8px 36px rgba(0, 0, 0, 0.25);
+}
+
+.form__error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
 }
 
 .title {
@@ -242,6 +300,11 @@ input:focus {
 
 .btn-login:hover {
   background: #003be0;
+}
+
+.btn-login:disabled {
+  cursor: wait;
+  opacity: 0.8;
 }
 
 /* Link dưới cùng */

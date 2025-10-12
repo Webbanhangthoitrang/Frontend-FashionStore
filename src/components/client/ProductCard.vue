@@ -8,33 +8,33 @@
     <article class="card">
       <!-- Ảnh sản phẩm -->
       <div class="card__thumb">
-        <img :src="product.image" :alt="product.name" />
+  <img :src="imageSrc" :alt="product.name" />
       </div>
 
       <!-- Thông tin sản phẩm -->
       <div class="card__body">
         <h3 class="card__title">{{ product.name }}</h3>
-        <p class="card__price">{{ formatVND(product.price) }}</p>
+        <p v-if="brand" class="card__brand">{{ brand }}</p>
+  <p class="card__price">{{ formatCurrencyVND(price) }}</p>
       </div>
     </article>
   </RouterLink>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import fallbackAsset from '../../assets/image1.png'
+import { formatCurrencyVND } from '../../utils/format'
+
+const props = defineProps({
   product: {
     type: Object,
     required: true,
   },
 })
-
-function formatVND(value) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+const imageSrc = computed(() => props.product?.imageUrl || fallbackAsset)
+const price = computed(() => props.product?.price ?? 0)
+const brand = computed(() => props.product?.categoryName || '')
 </script>
 
 <style scoped>
@@ -89,6 +89,7 @@ function formatVND(value) {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 6px;
 }
 
 /* Tên sản phẩm */
@@ -110,5 +111,11 @@ function formatVND(value) {
   color: #000000;
   font-size: 14px;
   font-weight: 700;
+}
+
+.card__brand {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
 }
 </style>

@@ -115,6 +115,9 @@
                 class="form"
                 @submit.prevent="onSubmit"
               >
+                <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
+                <p v-if="successMessage" class="form__success">{{ successMessage }}</p>
+                <p v-if="loading" class="form__loading">Đang tải thông tin…</p>
                 <div class="form__row">
                   <label 
                     for="username"
@@ -312,32 +315,76 @@
 </template>
 
 <script setup>
-import { 
-  reactive, 
-  ref 
+import {
+  reactive,
+  ref,
+  onMounted,
 } from 'vue'
-
+import { useRouter } from 'vue-router'
 import ClientHeader from '../../components/client/ClientHeaderLogged.vue'
 import ClientFooter from '../../components/client/ClientFooter.vue'
+import { getProfile } from '../../services/authService'
+import { useAuthStore, clearAuth } from '../../stores/auth'
+
+const router = useRouter()
+const { state, isLoggedIn } = useAuthStore()
 
 const form = reactive({
-  username: 'xunmaing240',
-  fullname: 'XuanMai2411❤️😎',
-  email: 'xuanmai@gmail.com',
-  phone: '(+84) 123 456 789',
-  dob: '24/11/2004',
-  gender: 'male'
+  username: '',
+  fullname: '',
+  email: '',
+  phone: '',
+  dob: '',
+  gender: 'male',
 })
 
 const fileObj = ref(null)
+const loading = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
+
+async function loadProfile() {
+  if (!isLoggedIn.value) {
+    router.replace('/login')
+    return
+  }
+
+  loading.value = true
+  errorMessage.value = ''
+
+  try {
+    const profile = await getProfile()
+    const user = profile?.user || state.user
+
+    if (!user) {
+      throw new Error('Không tìm thấy thông tin người dùng')
+    }
+
+    form.username = user.name || ''
+    form.fullname = user.name || ''
+    form.email = user.email || ''
+    form.phone = user.phone || ''
+    form.gender = user.gender || form.gender || 'male'
+    form.dob = user.dob || ''
+  } catch (error) {
+    console.error('Không thể tải hồ sơ', error)
+    errorMessage.value = error?.message || 'Không thể tải hồ sơ người dùng.'
+    if (error?.status === 401) {
+      clearAuth()
+      router.replace('/login')
+    }
+  } finally {
+    loading.value = false
+  }
+}
 
 function onSubmit() {
-  // Front-end demo: kiểm tra cơ bản
   if (!form.username || !form.email) {
-    alert('Vui lòng nhập đủ Tên đăng nhập và Email.')
+    errorMessage.value = 'Vui lòng nhập đầy đủ tên đăng nhập và email.'
     return
-    }
-  alert('Đã lưu hồ sơ (demo).')
+  }
+  successMessage.value = 'Thông tin được lưu (demo - cần API cập nhật hồ sơ).'
+  errorMessage.value = ''
 }
 
 function onFileChange(e) {
@@ -358,6 +405,10 @@ function onFileChange(e) {
   fileObj.value = file
   alert('Ảnh đã chọn (demo).')
 }
+
+onMounted(() => {
+  loadProfile()
+})
 </script>
 
 <style scoped>
@@ -591,6 +642,33 @@ function onFileChange(e) {
 
 .btn--primary:hover {
   background: #dc2626;
+}
+
+.form__error {
+  background: #fee2e2;
+  color: #981b1b;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.form__success {
+  background: #dcfce7;
+  color: #166534;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.form__loading {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
 }
 
 /* =========== Uploader =========== */

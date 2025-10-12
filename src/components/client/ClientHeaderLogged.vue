@@ -3,11 +3,13 @@
     <div class="header__container">
       <!-- Logo -->
       <div class="header__left">
-        <img 
-          src="../../assets/logo.png" 
-          alt="Logo" 
-          class="header__logo" 
-        />
+        <router-link to="/" class="header__logo-link" aria-label="Trang chủ">
+          <img 
+            src="../../assets/logo.png" 
+            alt="Logo" 
+            class="header__logo" 
+          />
+        </router-link>
       </div>
 
       <!-- Thanh tìm kiếm -->
@@ -92,6 +94,28 @@
             </svg>
             <span>{{ username }}</span>
           </router-link>
+
+          <button 
+            type="button"
+            class="header__user-link header__logout"
+            @click="logout"
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              class="header__icon"
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              stroke-width="2" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Đăng xuất</span>
+          </button>
         </nav>
 
         <!-- Nếu chưa đăng nhập -->
@@ -120,6 +144,7 @@
         <button 
           class="header__cart" 
           aria-label="Giỏ hàng"
+          @click="goToCart"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -154,16 +179,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore, clearAuth } from '../../stores/auth'
 
 const keyword = ref('')
+const router = useRouter()
+const route = useRoute()
+const { state, isLoggedIn } = useAuthStore()
 
-// ✅ Giả lập đăng nhập thành công
-const isLoggedIn = ref(true)
-const username = ref('xunmaing240')
+watch(
+  () => route.query.q,
+  (value) => {
+    keyword.value = (value || '').toString()
+  },
+  { immediate: true }
+)
+
+const username = computed(() => state.user?.name || state.user?.email || 'Tài khoản')
 
 function onSearch() {
-  console.log('Tìm kiếm:', keyword.value)
+  const q = keyword.value.trim()
+  router.push({ name: 'home', query: q ? { q } : {} })
+}
+
+function goToCart() {
+  router.push({ path: '/cart' })
+}
+
+function logout() {
+  clearAuth()
+  router.push({ path: '/login' })
 }
 </script>
 
@@ -191,6 +237,7 @@ function onSearch() {
 
 /* Logo */
 .header__left { display: flex; align-items: center; }
+.header__logo-link { display: inline-flex; }
 .header__logo {
   height: 50px;
   width: auto;
@@ -258,6 +305,11 @@ function onSearch() {
 }
 .header__user-link:hover {
   text-decoration: underline;
+}
+.header__logout {
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
 /* Khi chưa đăng nhập */
