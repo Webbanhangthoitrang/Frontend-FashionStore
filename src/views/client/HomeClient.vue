@@ -57,12 +57,6 @@ import ClientFooter from "../../components/client/ClientFooter.vue";
 import ProductCard from "../../components/client/ProductCard.vue";
 import { getCategories } from "../../services/categoryService";
 import { getProducts } from "../../services/productService";
-import dam from "../../assets/dam.png";
-import ao from "../../assets/ao.png";
-import quan from "../../assets/quan.png";
-import chanvay from "../../assets/chanvay.png";
-import aokhoac from "../../assets/aokhoac.png";
-import sale from "../../assets/sale.png";
 
 const categories = ref([]);
 const categoryLoading = ref(false);
@@ -71,15 +65,7 @@ const productLoading = ref(false);
 const route = useRoute();
 const searchTerm = ref("");
 
-const iconMap = {
-  "Đầm": dam,
-  "Váy": dam,
-  "Áo": ao,
-  "Quần": quan,
-  "Chân váy": chanvay,
-  "Áo khoác": aokhoac,
-  Sale: sale,
-};
+
 
 async function fetchCategories() {
   categoryLoading.value = true;

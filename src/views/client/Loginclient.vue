@@ -4,36 +4,36 @@
     <div class="bg" :style="{ backgroundImage: `url(${bgImg})` }"></div>
 
     <!-- Khung đăng nhập -->
-    <div class="form-box">
+    <div :class="['form-box', { shake: doShake }]">
       <h2 class="title">Welcome back!</h2>
-      <p class="subtitle">Đăng nhập bằng tài khoản đã đăng ký.</p>
+      <p class="subtitle">Access using the provided account.</p>
 
-      <form class="form" @submit.prevent="handleLogin">
-        <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
-        <!-- Email -->
-        <div class="field">
-          <label for="email">Email</label>
+      <form class="form" @submit.prevent="handleLogin" novalidate>
+        <!-- Email / Username -->
+        <div class="field" :class="{ 'has-error': errors.email }">
+          <label for="email">Username</label>
           <input
             id="email"
             v-model="email"
-            type="email"
-            placeholder="Email..."
-            required
+            type="text"
+            placeholder="Username..."
             autocomplete="email"
+            :class="{ 'input-error': errors.email }"
           />
+          <p v-if="errors.email" class="field-error">{{ errors.email }}</p>
         </div>
 
         <!-- Password -->
-        <div class="field">
-          <label for="password">Mật khẩu</label>
+        <div class="field" :class="{ 'has-error': errors.password }">
+          <label for="password">Password</label>
           <div class="input-wrap">
             <input
               id="password"
               v-model="password"
               :type="showPass ? 'text' : 'password'"
-              placeholder="Mật khẩu..."
-              required
+              placeholder="Password..."
               autocomplete="current-password"
+              :class="{ 'input-error': errors.password }"
             />
             <button
               type="button"
@@ -71,36 +71,30 @@
               </svg>
             </button>
           </div>
+          <p v-if="errors.password" class="field-error">{{ errors.password }}</p>
         </div>
 
-        <!-- Nhớ mật khẩu + Quên mật khẩu -->
+        <!-- Nhớ mật khẩu -->
         <div class="actions">
           <label class="remember">
             <input type="checkbox" v-model="remember" />
-            Ghi nhớ đăng nhập
+            Remember password
           </label>
-
-          <RouterLink to="/forgot-password" class="link">Quên mật khẩu</RouterLink>
         </div>
 
         <!-- Nút đăng nhập -->
         <button type="submit" class="btn-login" :disabled="loading">
-          <span v-if="loading">Đang đăng nhập...</span>
-          <span v-else>Đăng nhập</span>
+          <span v-if="loading">Logging in...</span>
+          <span v-else>Login</span>
         </button>
-
-        <!-- Đăng ký -->
-        <div class="under">
-          <RouterLink to="/register" class="link-strong">Đăng ký</RouterLink>
-        </div>
       </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useRouter, RouterLink } from "vue-router";
+import { ref, reactive } from "vue";
+import { useRouter } from "vue-router";
 import bgImg from "../../assets/anhnen1.jpeg";
 import { login } from "../../services/authService";
 import { useAuthStore } from "../../stores/auth";
@@ -113,42 +107,88 @@ const password = ref("");
 const remember = ref(false);
 const showPass = ref(false);
 const loading = ref(false);
-const errorMessage = ref("");
+const errors = reactive({ email: "", password: "" });
+const doShake = ref(false);
+
+function triggerShake() {
+  doShake.value = false;
+  setTimeout(() => {
+    doShake.value = true;
+    setTimeout(() => (doShake.value = false), 450);
+  }, 10);
+}
 
 async function handleLogin() {
-  errorMessage.value = "";
+  errors.email = "";
+  errors.password = "";
   loading.value = true;
   setStatus("loading");
   setError(null);
 
+  const trimmedEmail = email.value.trim();
+  const trimmedPassword = password.value;
+
   try {
-    const payload = {
-      email: email.value.trim().toLowerCase(),
-      password: password.value,
-    };
-    const response = await login(payload);
-    if (!response?.token) {
-      throw new Error("Không nhận được token từ máy chủ");
+    if (!trimmedEmail) errors.email = "Email is required";
+    if (!trimmedPassword) errors.password = "Password is required";
+    if (errors.email || errors.password) {
+      triggerShake();
+      loading.value = false;
+      return;
     }
+
+    const response = await login({ email: trimmedEmail, password: trimmedPassword });
+
+    if (!response?.token) {
+      throw new Error("Incorrect Email Address or Password");
+    }
+
     const userPayload = response.user || {
       id: 0,
-      name: response.role === "admin" ? "Admin" : email.value,
-      email: email.value,
+      name: trimmedEmail,
+      email: trimmedEmail,
       role: response.role,
     };
+
     setAuth(response.token, userPayload);
-    if (remember.value) {
-      localStorage.setItem("authRemember", "1");
-    } else {
-      localStorage.removeItem("authRemember");
-    }
-    setStatus("success");
+    if (remember.value) localStorage.setItem("authRemember", "1");
+    else localStorage.removeItem("authRemember");
+
     router.push("/");
   } catch (error) {
-    console.error("Đăng nhập thất bại", error);
-    const message = error?.message || "Đăng nhập thất bại. Vui lòng thử lại.";
-    errorMessage.value = message;
-    setError(message);
+    console.error("Đăng nhập thất bại:", error);
+
+    // Kiểm tra nếu là lỗi xác thực (401 hoặc lỗi credentials)
+    const is401Error = error?.status === 401;
+    const errorMsg = (error?.message || "").toLowerCase();
+    
+    if (is401Error || 
+        errorMsg.includes("invalid") || 
+        errorMsg.includes("incorrect") ||
+        errorMsg.includes("không đúng") ||
+        errorMsg.includes("sai")) {
+      
+      // Phân tích lỗi cụ thể từ message
+      if (errorMsg.includes("email") || errorMsg.includes("user") || errorMsg.includes("tài khoản")) {
+        errors.email = "Incorrect Email Address";
+        errors.password = "";
+      } else if (errorMsg.includes("password") || errorMsg.includes("mật khẩu")) {
+        errors.email = "";
+        errors.password = "Incorrect Password";
+      } else {
+        // Không xác định được cụ thể, hiển thị lỗi chung
+        errors.email = "Sai Email hoặc Mật Khẩu";
+        errors.password = "Sai Email hoặc Mật Khẩu";
+      }
+      
+      setError("Thông tin đăng nhập không chính xác");
+      triggerShake();
+    } else {
+      // Lỗi khác (server error, network error, etc.)
+      setError(error?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+      triggerShake();
+    }
+
     setStatus("error");
   } finally {
     loading.value = false;
@@ -157,7 +197,6 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-/* Tổng thể */
 .login-page {
   position: relative;
   height: 100vh;
@@ -165,6 +204,8 @@ async function handleLogin() {
   justify-content: center;
   align-items: center;
   font-family: "Poppins", sans-serif;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 /* Ảnh nền */
@@ -174,51 +215,69 @@ async function handleLogin() {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  filter: brightness(0.96);
+  filter: brightness(0.95);
   z-index: 1;
 }
 
-/* Form đăng nhập */
+/* Khung đăng nhập */
 .form-box {
   position: relative;
   z-index: 2;
   width: 380px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 32px 36px;
-  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.25);
+  max-width: calc(100% - 40px);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 28px 36px;
+  box-shadow: 0 10px 40px rgba(2, 6, 23, 0.25);
+  transition: transform 0.12s ease;
 }
 
-.form__error {
-  background: #fee2e2;
-  color: #991b1b;
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-size: 14px;
+.form-box.shake {
+  animation: shake 420ms ease;
 }
 
+@keyframes shake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-6px);
+  }
+  80% {
+    transform: translateX(6px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Title */
 .title {
   text-align: left;
-  font-family: "Khula", sans-serif;
-  margin-bottom: 30px;
-  color: #333;
-  font-size: 24px;
-  font-weight: 600;
+  margin-bottom: 6px;
+  color: #111827;
+  font-size: 26px;
+  font-weight: 700;
 }
 
 .subtitle {
   font-size: 13px;
   color: #6b7280;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
-/* Input */
+/* Input field */
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 label {
@@ -231,23 +290,46 @@ label {
   position: relative;
 }
 
+/* Input styles */
 input[type="text"],
-input[type="password"] {
-  width: 330px;
-  padding: 10px 42px 10px 12px;
-  border: 1px solid #d1d5db;
+input[type="password"],
+input[type="email"] {
+  width: 100%;
+  padding: 11px 40px 11px 12px;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 14px;
   outline: none;
-  transition: border 0.2s;
+  transition: border 0.15s, box-shadow 0.15s;
+  background: #fff;
+  color: #0f172a;
+  box-sizing: border-box;
 }
 
 input:focus {
-  border-color: #4f7ee6;
-  box-shadow: 0 0 0 3px rgba(79, 126, 230, 0.15);
+  border-color: #3b5bff;
+  box-shadow: 0 0 0 6px rgba(59, 91, 255, 0.06);
 }
 
-/* Con mắt hiển thị mật khẩu */
+/* Lỗi */
+.input-error {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.06);
+}
+
+.field.has-error input {
+  border-color: #dc2626 !important;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+/* Icon con mắt */
 .eye {
   position: absolute;
   right: 10px;
@@ -257,9 +339,13 @@ input:focus {
   border: none;
   cursor: pointer;
   color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
 }
 
-/* Nhớ mật khẩu + Quên mật khẩu */
+/* Remember password */
 .actions {
   display: flex;
   align-items: center;
@@ -275,51 +361,29 @@ input:focus {
   color: #374151;
 }
 
-.link {
-  color: #4f7ee6;
-  text-decoration: none;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
-/* Nút đăng nhập */
+/* Nút login */
 .btn-login {
   width: 100%;
-  background: #1a4bff;
+  background: linear-gradient(180deg, #2748ff 0%, #0820d6 100%);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
-  padding: 10px 0;
-  border-radius: 8px;
-  font-size: 15px;
+  padding: 12px 0;
+  border-radius: 10px;
+  font-size: 16px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: transform 0.08s ease, box-shadow 0.1s ease;
+  box-shadow: 0 6px 18px rgba(41, 67, 255, 0.18);
 }
 
-.btn-login:hover {
-  background: #003be0;
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 .btn-login:disabled {
   cursor: wait;
-  opacity: 0.8;
-}
-
-/* Link dưới cùng */
-.under {
-  margin-top: 12px;
-  text-align: center;
-}
-
-.link-strong {
-  color: #1a4bff;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.link-strong:hover {
-  text-decoration: underline;
+  opacity: 0.75;
+  transform: none;
+  box-shadow: none;
 }
 </style>

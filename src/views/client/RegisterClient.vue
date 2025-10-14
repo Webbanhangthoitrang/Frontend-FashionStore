@@ -152,7 +152,7 @@ import { register } from '../../services/authService'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
-const { setAuth, setStatus, setError } = useAuthStore()
+const {setStatus, setError } = useAuthStore()
 
 const formData = reactive({
   username: '',
@@ -166,7 +166,6 @@ const showConfirmPassword = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-
 async function handleRegister() {
   errorMessage.value = ''
   successMessage.value = ''
@@ -189,21 +188,12 @@ async function handleRegister() {
     }
 
     const response = await register(payload)
-    if (!response?.token) {
-      throw new Error('Không nhận được token sau khi đăng ký')
-    }
-
-    setAuth(response.token, response.user || {
-      id: response.user?.id || 0,
-      name: payload.name,
-      email: payload.email,
-      role: response.role,
-    })
 
     setStatus('success')
-    successMessage.value = 'Đăng ký thành công! Chuyển sang trang chủ...'
+    successMessage.value = 'Đăng ký thành công! Đang chuyển sang trang đăng nhập...'
+
     setTimeout(() => {
-      router.push('/')
+      router.replace({ name: 'login', query: { email: payload.email, registered: '1' } })
     }, 800)
   } catch (error) {
     console.error('Đăng ký thất bại', error)
