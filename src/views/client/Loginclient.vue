@@ -9,29 +9,29 @@
       <p class="subtitle">Access using the provided account.</p>
 
       <form class="form" @submit.prevent="handleLogin" novalidate>
-        <!-- Email / Username -->
+        <!-- Tên đăng nhập -->
         <div class="field" :class="{ 'has-error': errors.email }">
-          <label for="email">Username</label>
+          <label for="email">Email</label>
           <input
             id="email"
             v-model="email"
             type="text"
-            placeholder="Username..."
-            autocomplete="email"
+            placeholder="Email..."
+            autocomplete="username"
             :class="{ 'input-error': errors.email }"
           />
           <p v-if="errors.email" class="field-error">{{ errors.email }}</p>
         </div>
 
-        <!-- Password -->
+        <!-- Mật khẩu -->
         <div class="field" :class="{ 'has-error': errors.password }">
-          <label for="password">Password</label>
+          <label for="password">Mật khẩu</label>
           <div class="input-wrap">
             <input
               id="password"
               v-model="password"
               :type="showPass ? 'text' : 'password'"
-              placeholder="Password..."
+              placeholder="Mật khẩu..."
               autocomplete="current-password"
               :class="{ 'input-error': errors.password }"
             />
@@ -39,7 +39,7 @@
               type="button"
               class="eye"
               @click="showPass = !showPass"
-              :aria-label="showPass ? 'Ẩn' : 'Hiện'"
+              :aria-label="showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
             >
               <svg
                 v-if="showPass"
@@ -74,19 +74,29 @@
           <p v-if="errors.password" class="field-error">{{ errors.password }}</p>
         </div>
 
-        <!-- Nhớ mật khẩu -->
+        <!-- Nhớ mật khẩu + Quên mật khẩu -->
         <div class="actions">
           <label class="remember">
             <input type="checkbox" v-model="remember" />
-            Remember password
+            Nhớ mật khẩu
           </label>
+
+          <!-- Link quên mật khẩu -->
+          <RouterLink to="/forgot-password" class="link-forgot">
+            Quên mật khẩu
+          </RouterLink>
         </div>
 
         <!-- Nút đăng nhập -->
         <button type="submit" class="btn-login" :disabled="loading">
-          <span v-if="loading">Logging in...</span>
-          <span v-else>Login</span>
+          <span v-if="loading">Đang đăng nhập…</span>
+          <span v-else>Đăng nhập</span>
         </button>
+
+        <!-- Link đăng ký -->
+        <div class="register-wrap">
+          <RouterLink to="/register" class="link-register">Đăng ký</RouterLink>
+        </div>
       </form>
     </div>
   </div>
@@ -94,7 +104,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, RouterLink } from "vue-router";
 import bgImg from "../../assets/anhnen1.jpeg";
 import { login } from "../../services/authService";
 import { useAuthStore } from "../../stores/auth";
@@ -129,8 +139,8 @@ async function handleLogin() {
   const trimmedPassword = password.value;
 
   try {
-    if (!trimmedEmail) errors.email = "Email is required";
-    if (!trimmedPassword) errors.password = "Password is required";
+    if (!trimmedEmail) errors.email = "Vui lòng nhật đầy đủ thông tin";
+    if (!trimmedPassword) errors.password = "Vui lòng nhật đầy đủ thông tin";
     if (errors.email || errors.password) {
       triggerShake();
       loading.value = false;
@@ -139,9 +149,7 @@ async function handleLogin() {
 
     const response = await login({ email: trimmedEmail, password: trimmedPassword });
 
-    if (!response?.token) {
-      throw new Error("Incorrect Email Address or Password");
-    }
+    if (!response?.token) throw new Error("Email hoặc mật khẩu không chính xác");
 
     const userPayload = response.user || {
       id: 0,
@@ -157,34 +165,29 @@ async function handleLogin() {
     router.push("/");
   } catch (error) {
     console.error("Đăng nhập thất bại:", error);
-
-    // Kiểm tra nếu là lỗi xác thực (401 hoặc lỗi credentials)
     const is401Error = error?.status === 401;
     const errorMsg = (error?.message || "").toLowerCase();
-    
-    if (is401Error || 
-        errorMsg.includes("invalid") || 
-        errorMsg.includes("incorrect") ||
-        errorMsg.includes("không đúng") ||
-        errorMsg.includes("sai")) {
-      
-      // Phân tích lỗi cụ thể từ message
+
+    if (
+      is401Error ||
+      errorMsg.includes("invalid") ||
+      errorMsg.includes("incorrect") ||
+      errorMsg.includes("không đúng") ||
+      errorMsg.includes("sai")
+    ) {
       if (errorMsg.includes("email") || errorMsg.includes("user") || errorMsg.includes("tài khoản")) {
-        errors.email = "Incorrect Email Address";
+        errors.email = "Email không hợp lệ";
         errors.password = "";
       } else if (errorMsg.includes("password") || errorMsg.includes("mật khẩu")) {
-        errors.email = "";
-        errors.password = "Incorrect Password";
+        errors.email = "Email hoặc mật khẩu không chính xác";
+        errors.password = "Email hoặc mật khẩu không chính xác";
       } else {
-        // Không xác định được cụ thể, hiển thị lỗi chung
-        errors.email = "Sai Email hoặc Mật Khẩu";
-        errors.password = "Sai Email hoặc Mật Khẩu";
+        errors.email = "Email hoặc mật khẩu không chính xác";
+        errors.password = "Email hoặc mật khẩu không chính xác";
       }
-      
       setError("Thông tin đăng nhập không chính xác");
       triggerShake();
     } else {
-      // Lỗi khác (server error, network error, etc.)
       setError(error?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
       triggerShake();
     }
@@ -237,24 +240,12 @@ async function handleLogin() {
 }
 
 @keyframes shake {
-  0% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-8px);
-  }
-  40% {
-    transform: translateX(8px);
-  }
-  60% {
-    transform: translateX(-6px);
-  }
-  80% {
-    transform: translateX(6px);
-  }
-  100% {
-    transform: translateX(0);
-  }
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+  100% { transform: translateX(0); }
 }
 
 /* Title */
@@ -286,9 +277,7 @@ label {
   color: #111827;
 }
 
-.input-wrap {
-  position: relative;
-}
+.input-wrap { position: relative; }
 
 /* Input styles */
 input[type="text"],
@@ -317,9 +306,7 @@ input:focus {
   box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.06);
 }
 
-.field.has-error input {
-  border-color: #dc2626 !important;
-}
+.field.has-error input { border-color: #dc2626 !important; }
 
 .field-error {
   color: #dc2626;
@@ -345,7 +332,7 @@ input:focus {
   padding: 6px;
 }
 
-/* Remember password */
+/* Nhớ mật khẩu + Quên mật khẩu */
 .actions {
   display: flex;
   align-items: center;
@@ -360,6 +347,12 @@ input:focus {
   gap: 8px;
   color: #374151;
 }
+
+.link-forgot {
+  color: #6b7280;
+  text-decoration: none;
+}
+.link-forgot:hover { text-decoration: underline; }
 
 /* Nút login */
 .btn-login {
@@ -376,9 +369,7 @@ input:focus {
   box-shadow: 0 6px 18px rgba(41, 67, 255, 0.18);
 }
 
-.btn-login:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
+.btn-login:hover:not(:disabled) { transform: translateY(-1px); }
 
 .btn-login:disabled {
   cursor: wait;
@@ -386,4 +377,17 @@ input:focus {
   transform: none;
   box-shadow: none;
 }
+
+/* Link đăng ký */
+.register-wrap {
+  text-align: center;
+  margin-top: 12px;
+}
+.link-register {
+  font-size: 14px;
+  color: #2748ff;
+  text-decoration: none;
+  font-weight: 600;
+}
+.link-register:hover { text-decoration: underline; }
 </style>

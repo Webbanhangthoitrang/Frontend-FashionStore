@@ -3,34 +3,60 @@
     <!-- Header -->
     <ClientHeader />
 
-    <!-- Banner -->
-    <section class="banner">
-      <img src="../../assets/banner.png" alt="Banner thời trang" class="banner__img" />
+    <!-- Banner (fade) -->
+    <section class="banner" @mouseenter="pause" @mouseleave="play">
+      <div class="banner__fade">
+        <img
+          v-for="(img, i) in banners"
+          :key="i"
+          :src="img"
+          :alt="`banner ${i + 1}`"
+          class="banner__img"
+          :class="{ active: i === currentIndex }"
+        />
+      </div>
+
+      <div class="banner__dots">
+        <span
+          v-for="(_, i) in banners"
+          :key="i"
+          :class="['dot', { active: i === currentIndex }]"
+          @click="go(i)"
+        />
+      </div>
     </section>
 
     <!-- Danh mục -->
     <section class="category">
       <h2 class="category__title">Danh mục</h2>
+
       <div v-if="categoryLoading" class="state">Đang tải danh mục…</div>
-      <div v-else-if="categories.length === 0" class="state">Chưa có danh mục nào.</div>
-      <div v-else class="category__list">
-        <div
-          v-for="item in categories"
-          :key="item.id || item.name"
-          class="category__item"
-        >
-          <img :src="item.icon" :alt="item.name" class="category__icon" />
-          <p class="category__name">{{ item.name }}</p>
+
+      <div v-else>
+        <div class="category__list">
+          <RouterLink
+            v-for="item in categories"
+            :key="item.id || item.name"
+            class="category__item"
+            :to="{ path: '/category/' + item.slug, query: { page: 1 } }"
+          >
+            <img
+              :src="item.icon || fallbackIcon"
+              :alt="item.name"
+              class="category__icon"
+              loading="lazy"
+            />
+            <p class="category__name">{{ item.name }}</p>
+          </RouterLink>
         </div>
+
+        <div v-if="!categories.length" class="state">Chưa có danh mục nào.</div>
       </div>
     </section>
 
-    <!-- Gợi ý thêm -->
-     <!-- Gợi ý sản phẩm -->
+    <!-- Gợi ý sản phẩm -->
     <section class="product">
-      <h2 class="product__title">
-        {{ searchTerm ? `Kết quả tìm kiếm cho "${searchTerm}"` : 'Gợi ý sản phẩm' }}
-      </h2>
+      <h2 class="product__title">{{ pageTitle }}</h2>
 
       <div v-if="productLoading" class="state">Đang tải sản phẩm…</div>
       <div v-else-if="products.length === 0" class="state">
@@ -40,8 +66,9 @@
         <ProductCard v-for="p in products" :key="p.id" :product="p" />
       </div>
     </section>
+
     <div class="more-btn">
-      <button>Gợi ý thêm sản phẩm</button>
+      <button @click="loadMore" :disabled="productLoading">Gợi ý thêm sản phẩm</button>
     </div>
 
     <!-- Footer -->
@@ -50,69 +77,156 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
 import ClientHeader from "../../components/client/ClientHeaderLogged.vue";
 import ClientFooter from "../../components/client/ClientFooter.vue";
 import ProductCard from "../../components/client/ProductCard.vue";
 import { getCategories } from "../../services/categoryService";
-import { getProducts } from "../../services/productService";
+import { getAllProducts } from "../../services/productService";
 
+import banner1 from "../../assets/banner1.png";
+import banner2 from "../../assets/banner2.png";
+import banner3 from "../../assets/banner3.png";
+import banner4 from "../../assets/banner4.png";
+
+/* ---------- Danh mục ---------- */
 const categories = ref([]);
 const categoryLoading = ref(false);
-const products = ref([]);
-const productLoading = ref(false);
-const route = useRoute();
-const searchTerm = ref("");
 
+// icon mặc định (data URL)
+const fallbackIcon =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="%2399A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>';
 
+function slugify(str = "") {
+  return String(str)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
 
 async function fetchCategories() {
   categoryLoading.value = true;
   try {
-    const data = await getCategories();
-    categories.value = data.map((item) => ({
-      ...item,
-      icon: iconMap[item.name] || sale,
-    }));
-  } catch (error) {
-    console.error("Không tải được danh mục", error);
+    const raw = await getCategories();
+    const arr = Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.data)
+      ? raw.data
+      : Array.isArray(raw?.items)
+      ? raw.items
+      : Array.isArray(raw?.data?.items)
+      ? raw.data.items
+      : [];
+
+    categories.value = arr.map((c) => {
+      const name = c?.name ?? "";
+      return {
+        id: c?.id ?? c?._id ?? name,
+        name,
+        icon: c?.icon || "",
+        slug: c?.slug ?? c?.code ?? slugify(name),
+      };
+    });
+  } catch (e) {
+    console.error("Không tải được danh mục", e);
     categories.value = [];
   } finally {
     categoryLoading.value = false;
   }
 }
 
-async function fetchProducts(params = {}) {
+/* ---------- Sản phẩm (gợi ý) ---------- */
+const route = useRoute();
+const products = ref([]);
+const productLoading = ref(false);
+const searchTerm = ref("");
+const page = ref(1);
+const pageSize = ref(12);
+
+const pageTitle = computed(() =>
+  searchTerm.value ? `Kết quả cho “${searchTerm.value}”` : "Gợi ý sản phẩm"
+);
+
+async function fetchProducts(append = false) {
   productLoading.value = true;
   try {
-    const payload = { limit: 12, ...params };
-    if (!payload.q) {
-      delete payload.q;
-    }
-    const data = await getProducts(payload);
-    products.value = data.items;
-  } catch (error) {
-    console.error("Không tải được sản phẩm", error);
-    products.value = [];
+    const res = await getAllProducts({
+      page: page.value,
+      pageSize: pageSize.value,
+      q: searchTerm.value || undefined,
+    });
+    const data = res?.data || [];
+    products.value = append ? [...products.value, ...data] : data;
+  } catch (e) {
+    console.error("Không tải được sản phẩm", e);
+    if (!append) products.value = [];
   } finally {
     productLoading.value = false;
   }
 }
 
+function loadMore() {
+  page.value += 1;
+  fetchProducts(true);
+}
+
+/* ---------- Banner ---------- */
+const banners = [banner1, banner2, banner3, banner4];
+const currentIndex = ref(0);
+const intervalTime = 3000;
+let timer = null;
+
+function next() {
+  currentIndex.value = (currentIndex.value + 1) % banners.length;
+}
+function go(i) {
+  currentIndex.value = i;
+}
+function play() {
+  if (timer) return;
+  timer = setInterval(next, intervalTime);
+}
+function pause() {
+  if (!timer) return;
+  clearInterval(timer);
+  timer = null;
+}
+
+/* ---------- Lifecycle ---------- */
 onMounted(() => {
+  // preload banner
+  banners.forEach((src) => {
+    const im = new Image();
+    im.src = src;
+  });
+
+  // nạp danh mục 1 lần
   fetchCategories();
-  const initial = route.query.q ? route.query.q.toString() : "";
-  searchTerm.value = initial;
-  fetchProducts({ q: initial });
+
+  // sản phẩm (khởi tạo theo query?q)
+  searchTerm.value = route.query.q ? route.query.q.toString() : "";
+  page.value = 1;
+  fetchProducts();
+
+  // banner
+  play();
 });
 
+onBeforeUnmount(() => {
+  pause();
+});
+
+// khi query q đổi -> nạp lại sản phẩm
 watch(
   () => route.query.q,
-  (value) => {
-    const term = value ? value.toString() : "";
-    searchTerm.value = term;
-    fetchProducts({ q: term });
+  () => {
+    searchTerm.value = route.query.q ? route.query.q.toString() : "";
+    page.value = 1;
+    fetchProducts();
   }
 );
 </script>
@@ -125,16 +239,51 @@ watch(
   background: #fff;
 }
 
-/* ---------- Banner ---------- */
+/* ---------- Banner (fade) ---------- */
 .banner {
   width: 100%;
-  height: 300px;
+  height: 320px;
   overflow: hidden;
+  position: relative;
 }
-.banner__img {
+.banner__fade {
+  position: relative;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+}
+.banner__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 800ms ease-in-out;
+  pointer-events: none;
+}
+.banner__img.active {
+  opacity: 1;
+}
+.banner__dots {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+.dot.active {
+  background: #4f7ee6;
+  transform: scale(1.2);
 }
 
 /* ---------- Danh mục ---------- */
@@ -149,12 +298,10 @@ watch(
   font-weight: 700;
   margin-bottom: 18px;
 }
-
-/* ✅ Trải đều toàn hàng, không còn trống hai mép */
 .category__list {
   display: grid;
-  grid-template-columns: repeat(6, 1fr); /* 6 cột bằng nhau, giãn hết chiều ngang */
-  gap: 70px;                              /* khoảng cách giữa các ô */
+  grid-template-columns: repeat(6, 1fr);
+  gap: 70px;
   align-items: stretch;
 }
 .category__item {
@@ -169,8 +316,11 @@ watch(
   justify-content: center;
   transition: all 0.2s ease;
   text-align: center;
+  text-decoration: none;
+  color: inherit;
 }
-.category__item:hover {
+.category__item:hover,
+.category__item.active {
   background: #f6f8ff;
   transform: translateY(-3px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
@@ -179,6 +329,7 @@ watch(
   width: 54px;
   height: 54px;
   margin-bottom: 10px;
+  object-fit: contain;
 }
 .category__name {
   font-weight: 600;
@@ -186,7 +337,7 @@ watch(
   color: #333;
 }
 
-/* Tablet: 3×2, vẫn đều và đẹp */
+/* Tablet */
 @media (max-width: 1024px) {
   .category__list {
     grid-template-columns: repeat(3, 1fr);
@@ -194,7 +345,7 @@ watch(
   }
 }
 
-/* Mobile: 1 hàng cuộn ngang */
+/* Mobile */
 @media (max-width: 640px) {
   .category__list {
     display: flex;
@@ -234,13 +385,15 @@ watch(
 footer {
   margin-top: auto;
 }
-.product{
+
+/* ---------- Sản phẩm ---------- */
+.product {
   max-width: 1200px;
   margin: 40px auto;
-  padding: 0 32px;    /* ít hơn để nhìn thoáng */
+  padding: 0 32px;
 }
-.product__title{
-  font-family: 'Khula', sans-serif;
+.product__title {
+  font-family: "Khula", sans-serif;
   text-align: center;
   font-size: 24px;
   font-weight: 700;
@@ -249,16 +402,29 @@ footer {
   margin-bottom: 28px;
   letter-spacing: 0.3px;
 }
-.product__grid{
-  display:grid;
+.product__grid {
+  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;          /* khoảng cách đều nhau */
+  gap: 24px;
   align-items: stretch;
 }
-@media (max-width: 1200px){ .product__grid{ grid-template-columns: repeat(3,1fr);} }
-@media (max-width: 900px){  .product__grid{ grid-template-columns: repeat(2,1fr);} }
-@media (max-width: 520px){  .product__grid{ grid-template-columns: 1fr; } }
+@media (max-width: 1200px) {
+  .product__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .product__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .product__grid {
+    grid-template-columns: 1fr;
+  }
+}
 
+/* ---------- State ---------- */
 .state {
   text-align: center;
   color: #4b5563;
@@ -267,5 +433,4 @@ footer {
 .state--error {
   color: #b91c1c;
 }
-
 </style>

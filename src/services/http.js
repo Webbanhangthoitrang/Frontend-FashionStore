@@ -5,7 +5,7 @@ const DEFAULT_HEADERS = {
   'ngrok-skip-browser-warning': 'true',
 };
 
-const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://3801c1341c4d.ngrok-free.app/api').trim();
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://tx972csv-5000.asse.devtunnels.ms/api').trim();
 const API_BASE_URL = rawBaseUrl.replace(/\/$/, '');
 
 function buildUrl(path = '', params) {

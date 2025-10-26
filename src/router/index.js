@@ -1,71 +1,84 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 
-// ✅ Import các trang chính
+// ====== Import các trang ======
 import HomeClient from '../views/client/HomeClient.vue'
 import RegisterClient from '../views/client/RegisterClient.vue'
-import LoginClient from '../views/client/LoginClient.vue'  
+import LoginClient from '../views/client/Loginclient.vue'
 import CartPage from '../views/client/CartPage.vue'
-import Notifications from '../views/client/Notifications.vue'
+import CategoryPage from '../views/client/CategoryPage.vue'
+import ProductDetail from '../views/client/ProductDetail.vue' // ✅ import tĩnh để tránh lỗi lazy load
 
+// ====== Cấu hình routes ======
 const routes = [
   {
     path: '/',
-    name: 'home',
-    component: HomeClient
+    name: 'Home',
+    component: HomeClient,
   },
   {
     path: '/register',
     name: 'register',
-    component: RegisterClient
+    component: RegisterClient,
   },
   {
     path: '/cart',
     name: 'cart',
-    component: CartPage
+    component: CartPage,
   },
   {
-    path: '/login',             
+    path: '/login',
     name: 'login',
-    component: LoginClient
+    component: LoginClient,
   },
+
+  // ====== Các trang khác dùng lazy import ======
   {
     path: '/notifications',
     name: 'notifications',
-    component: Notifications
+    component: () => import('../views/client/Notifications.vue'),
   },
   {
     path: '/forgot-password',
     name: 'ForgotPassword',
-    component: () => import('../views/client/ForgotPassword.vue')
+    component: () => import('../views/client/ForgotPassword.vue'),
   },
   {
-  path: '/verify-code',
-  name: 'VerifyCode',
-  component: () => import('../views/client/VerifyCode.vue')
-},
-{
-  path: '/reset-password',
-  name: 'ResetPassword',
-  component: () => import('../views/client/ResetPassword.vue')
-},
-{
-  path: '/product/:id',
-  name: 'ProductDetail',
-  component: () => import('../views/client/ProductDetail.vue'),
-  props: true, // truyền id thành prop
-},
-{
-  path: '/account/profile',
-  name: 'AccountProfile',
-  component: () => import('../views/client/AccountProfile.vue')
-}
+    path: '/verify-code',
+    name: 'VerifyCode',
+    component: () => import('../views/client/VerifyCode.vue'),
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/client/ResetPassword.vue'),
+  },
 
+  // ====== Chi tiết sản phẩm ======
+  {
+    path: '/product/:id',
+    name: 'ProductDetail',
+    component: ProductDetail, // ✅ dùng import tĩnh đã khai báo ở trên
+    props: true,
+  },
 
+  // ====== Danh mục sản phẩm ======
+  {
+    path: '/category/:slug?',
+    name: 'Category',
+    component: CategoryPage,
+    props: (route) => ({
+      slug: route.params.slug || null,
+      page: Number(route.query.page || 1),
+    }),
+  },
 ]
 
+// ====== Khởi tạo router ======
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 })
 
+// ====== Xuất router ======
 export default router

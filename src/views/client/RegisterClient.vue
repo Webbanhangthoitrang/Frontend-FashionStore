@@ -1,55 +1,61 @@
 <template>
   <div class="register-page">
-    <!-- Ảnh nền sử dụng thẻ img -->
-    <img src="../../assets/anhnen1.jpeg" alt="Background" class="background-image">
+    <!-- Ảnh nền -->
+    <img src="../../assets/anhnen1.jpeg" alt="Background" class="background-image" />
 
-    <!-- Form đăng ký -->
     <div class="register-card">
       <h2 class="title">Đăng ký</h2>
 
-      <form class="form" @submit.prevent="handleRegister">
+      <form class="form" @submit.prevent="handleRegister" novalidate>
+        <!-- Thông báo tổng -->
         <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form__success">{{ successMessage }}</p>
-        <!-- Tên đăng nhập -->
-        <div class="form-group">
-          <label for="username">Tên đăng nhập</label>
-          <input 
-            id="username" 
-            v-model="formData.username" 
-            type="text" 
-            placeholder="Tên đăng nhập..." 
-            required 
+
+        <!-- Tên tài khoản -->
+        <div class="form-group" :class="{ 'has-error': errors.username }">
+          <label for="username">Tên tài khoản</label>
+          <input
+            id="username"
+            v-model.trim="formData.username"
+            type="text"
+            placeholder="Tên tài khoản..."
+            class="input"
+            :aria-invalid="!!errors.username"
           />
+          <small v-if="errors.username" class="field-error">{{ errors.username }}</small>
         </div>
 
         <!-- Email -->
-        <div class="form-group">
+        <div class="form-group" :class="{ 'has-error': errors.email }">
           <label for="email">Email</label>
-          <input 
-            id="email" 
-            v-model="formData.email" 
-            type="email" 
-            placeholder="Email..." 
-            required 
+          <input
+            id="email"
+            v-model.trim="formData.email"
+            type="email"
+            placeholder="Email..."
+            class="input"
+            :aria-invalid="!!errors.email"
           />
+          <small v-if="errors.email" class="field-error">{{ errors.email }}</small>
         </div>
 
         <!-- Mật khẩu -->
-        <div class="form-group">
+        <div class="form-group" :class="{ 'has-error': errors.password }">
           <label for="password">Mật khẩu</label>
           <div class="input-wrap">
-            <input 
-              id="password" 
-              v-model="formData.password" 
-              :type="showPassword ? 'text' : 'password'" 
-              placeholder="Mật khẩu..." 
-              required 
+            <input
+              id="password"
+              v-model="formData.password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="Mật khẩu..."
+              class="input"
+              :aria-invalid="!!errors.password"
             />
             <button
               type="button"
               class="eye"
               @click="showPassword = !showPassword"
-              :aria-label="showPassword ? 'Hide' : 'Show'"
+              :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
             >
               <svg
                 v-if="showPassword"
@@ -81,24 +87,26 @@
               </svg>
             </button>
           </div>
+          <small v-if="errors.password" class="field-error">{{ errors.password }}</small>
         </div>
 
         <!-- Xác nhận mật khẩu -->
-        <div class="form-group">
+        <div class="form-group" :class="{ 'has-error': errors.confirmPassword }">
           <label for="confirmPassword">Xác nhận mật khẩu</label>
           <div class="input-wrap">
-            <input 
-              id="confirmPassword" 
-              v-model="formData.confirmPassword" 
-              :type="showConfirmPassword ? 'text' : 'password'" 
-              placeholder="Xác nhận mật khẩu..." 
-              required 
+            <input
+              id="confirmPassword"
+              v-model="formData.confirmPassword"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              placeholder="Xác nhận mật khẩu..."
+              class="input"
+              :aria-invalid="!!errors.confirmPassword"
             />
             <button
               type="button"
               class="eye"
               @click="showConfirmPassword = !showConfirmPassword"
-              :aria-label="showConfirmPassword ? 'Hide' : 'Show'"
+              :aria-label="showConfirmPassword ? 'Ẩn xác nhận' : 'Hiện xác nhận'"
             >
               <svg
                 v-if="showConfirmPassword"
@@ -130,12 +138,13 @@
               </svg>
             </button>
           </div>
+          <small v-if="errors.confirmPassword" class="field-error">{{ errors.confirmPassword }}</small>
         </div>
 
         <!-- Nút hành động -->
         <div class="form-actions">
           <button type="submit" class="btn-submit" :disabled="loading">
-            <span v-if="loading">Đang đăng ký...</span>
+            <span v-if="loading">Đang xử lý...</span>
             <span v-else>Đăng ký</span>
           </button>
           <button type="button" class="btn-login" @click="goToLogin">Đăng nhập</button>
@@ -146,69 +155,206 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { register } from '../../services/authService'
-import { useAuthStore } from '../../stores/auth'
+    import { reactive, ref } from 'vue'
+    import { useRouter } from 'vue-router'
+    import { register } from '../../services/authService'
+    import { useAuthStore } from '../../stores/auth'
 
-const router = useRouter()
-const {setStatus, setError } = useAuthStore()
+    const router = useRouter()
+    const { setStatus, setError } = useAuthStore()
 
-const formData = reactive({
-  username: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-})
+    // ===== STATE =====
+    const formData = reactive({
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    })
+    const errors = reactive({
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    })
 
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
-const loading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
-async function handleRegister() {
-  errorMessage.value = ''
-  successMessage.value = ''
+    const showPassword = ref(false)
+    const showConfirmPassword = ref(false)
+    const loading = ref(false)
+    const errorMessage = ref('')
+    const successMessage = ref('')
 
-  if (formData.password !== formData.confirmPassword) {
-    errorMessage.value = 'Mật khẩu xác nhận không khớp.'
-    return
-  }
-
-  loading.value = true
-  setStatus('loading')
-  setError(null)
-
-  try {
-    const payload = {
-      name: formData.username.trim(),
-      fullName: formData.username.trim(),
-      email: formData.email.trim().toLowerCase(),
-      password: formData.password,
+    // ===== MESSAGE HELPERS =====
+    function clearNotify() {
+      errorMessage.value = ''
+      successMessage.value = ''
+    }
+    function showError(msg) {
+      errorMessage.value = msg
+      successMessage.value = ''
+      setError(msg)
+      setStatus('error')
+    }
+    function showSuccess(msg) {
+      successMessage.value = msg
+      errorMessage.value = ''
+      setError(null)
+      setStatus('success')
     }
 
-    const response = await register(payload)
+    // ===== VALIDATION =====
+    function clearFieldErrors() {
+      Object.keys(errors).forEach(k => (errors[k] = ''))
+    }
 
-    setStatus('success')
-    successMessage.value = 'Đăng ký thành công! Đang chuyển sang trang đăng nhập...'
+    // chữ cái (kể cả có dấu) tối thiểu 1
+    const LETTER_REGEX = /[A-Za-zÀ-ỹ]/;
+    // email cơ bản
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // mật khẩu: >=8, 1 HOA, 1 số, 1 ký tự đặc biệt
+    const PASSWORD_POLICY = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-    setTimeout(() => {
-      router.replace({ name: 'login', query: { email: payload.email, registered: '1' } })
-    }, 800)
-  } catch (error) {
-    console.error('Đăng ký thất bại', error)
-    const message = error?.message || 'Đăng ký thất bại. Vui lòng thử lại.'
-    errorMessage.value = message
-    setError(message)
-    setStatus('error')
-  } finally {
-    loading.value = false
-  }
-}
+    function validateBasic() {
+      clearFieldErrors()
+      let valid = true
 
-function goToLogin() {
-  router.push('/login')
-}
+      // 1) Username
+      if (!formData.username.trim()) {
+        errors.username = 'Vui lòng nhập Tên đăng nhập.'
+        valid = false
+      } else if (!LETTER_REGEX.test(formData.username)) {
+        // 3) “Tên đăng nhập” sai định dạng
+        errors.username = 'Không được chỉ chứa số hoặc ký tự đặc biệt. Vui lòng nhập ít nhất một chữ cái.'
+        valid = false
+      }
+
+      // 2) Email
+      if (!formData.email.trim()) {
+        errors.email = 'Vui lòng nhập Email.'
+        valid = false
+      } else if (!EMAIL_REGEX.test(formData.email)) {
+        errors.email = 'Địa chỉ email không hợp lệ.'
+        valid = false
+      }
+
+      // 5) Password & Confirm
+      if (!formData.password) {
+        errors.password = 'Vui lòng nhập Mật khẩu.'
+        valid = false
+      } else if (!PASSWORD_POLICY.test(formData.password)) {
+        errors.password = 'Mật khẩu phải có ít nhất 8 ký tự, 1 chữ cái hoa, 1 chữ số và 1 ký tự đặc biệt.'
+        valid = false
+      }
+
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = 'Vui lòng nhập Xác nhận mật khẩu.'
+        valid = false
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = 'Xác nhận mật khẩu không khớp.'
+        valid = false
+      }
+
+
+      return valid
+    }
+
+    // ===== Map lỗi API về field theo đặc tả =====
+    function mapApiErrorToFields(err) {
+      const status = err?.response?.status
+      const data = err?.response?.data || {}
+      const msg = (data.message || err?.message || '').toLowerCase()
+      const code = String(data.code || data.error || data.reason || '').toUpperCase()
+
+      // dạng mảng lỗi chi tiết
+      if (Array.isArray(data.errors)) {
+        for (const e of data.errors) {
+          const field = String(e?.field || '').toLowerCase()
+          const text = e?.message || ''
+          if (field.includes('email')) {
+            errors.email = 'Email đã được đăng ký, vui lòng dùng Email khác hoặc Đăng nhập.'
+            return true
+          }
+          if (field.includes('username') || field.includes('user')) {
+            errors.username = 'Tên đăng nhập đã tồn tại, vui lòng chọn tên khác.'
+            return true
+          }
+          if (field.includes('password') && text) {
+            errors.password = 'Mật khẩu phải có ít nhất 8 ký tự, 1 chữ cái hoa, 1 chữ số và 1 ký tự đặc biệt.'
+            return true
+          }
+        }
+      }
+
+      // email tồn tại
+      if (
+        code.includes('EMAIL') && (code.includes('EXIST') || code.includes('TAKEN') || code.includes('DUPLICATE')) ||
+        /email(.+)?(exists|taken|duplicate)/.test(msg) ||
+        msg.includes('email đã đăng') || msg.includes('email đã tồn tại')
+      ) {
+        errors.email = 'Email đã được đăng ký, vui lòng dùng Email khác hoặc Đăng nhập.'
+        return true
+      }
+
+      // username tồn tại
+      if (
+        code.includes('USERNAME') && (code.includes('EXIST') || code.includes('TAKEN') || code.includes('DUPLICATE')) ||
+        /user(name)?(.+)?(exists|taken|duplicate)/.test(msg) ||
+        msg.includes('tên đăng nhập đã tồn tại')
+      ) {
+        errors.username = 'Tên đăng nhập đã tồn tại, vui lòng chọn tên khác.'
+        return true
+      }
+
+      // 409 thường là “đã tồn tại” – nếu không rõ field, ưu tiên email
+      if (status === 409) {
+        errors.email = 'Email đã được đăng ký, vui lòng dùng Email khác hoặc Đăng nhập.'
+        return true
+      }
+
+      return false
+    }
+
+    // ===== SUBMIT =====
+    async function handleRegister() {
+      clearNotify()
+
+      if (!validateBasic()) return
+
+      loading.value = true
+      setStatus('loading')
+      setError(null)
+
+      try {
+        const payload = {
+          username: formData.username.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+        }
+
+        await register(payload)
+        showSuccess('Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.')
+
+        setTimeout(() => {
+          router.replace({ name: 'login', query: { email: payload.email, registered: '1' } })
+        }, 1200)
+      } catch (err) {
+        console.error('Đăng ký thất bại', err)
+
+        // Ưu tiên map lỗi theo field (email/username tồn tại, v.v.)
+        clearNotify()
+        const mapped = mapApiErrorToFields(err)
+        if (!mapped) {
+          // 6) Lỗi hệ thống DB
+          showError('Có lỗi xảy ra, vui lòng thử lại sau.')
+        }
+      } finally {
+        loading.value = false
+      }
+    }
+
+    // ===== NAV =====
+    function goToLogin() {
+      router.push('/login')
+    }
 </script>
 
 <style scoped>
@@ -224,8 +370,7 @@ function goToLogin() {
 
 .background-image {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -254,7 +399,7 @@ function goToLogin() {
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 label {
@@ -269,9 +414,7 @@ label {
   position: relative;
 }
 
-input[type="text"],
-input[type="password"],
-input[type="email"] {
+.input {
   width: 100%;
   padding: 10px 42px 10px 12px;
   border: 1px solid #d1d5db;
@@ -287,6 +430,19 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(79, 126, 230, 0.15);
 }
 
+/* Lỗi */
+.form-group.has-error .input {
+  border-color: #ef4444 !important;
+}
+
+.field-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #b91c1c;
+}
+
 /* Con mắt */
 .eye {
   position: absolute;
@@ -299,6 +455,7 @@ input:focus {
   color: #6b7280;
 }
 
+/* Nút hành động */
 .form-actions {
   display: flex;
   justify-content: space-between;
@@ -306,7 +463,6 @@ input:focus {
   margin-top: 25px;
 }
 
-/* Nút Đăng ký */
 .btn-submit {
   padding: 10px 24px;
   background: #003be0;
@@ -319,31 +475,28 @@ input:focus {
   transition: background-color 0.3s;
 }
 
-/* Nút Đăng nhập */
-.btn-login {
-  padding: 8px 0;
-  background: none;
-  color: #4a90e2;
-  border: none;
-  border-radius: 0;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.3s;
-  text-decoration: underline;
-}
-
-.btn-login:hover {
-  color: #357abd;
-  background: none;
-}
-
 .btn-submit:disabled {
   background: #0f3099;
   cursor: wait;
   opacity: 0.9;
 }
 
+.btn-login {
+  padding: 8px 0;
+  background: none;
+  color: #4a90e2;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-login:hover {
+  color: #357abd;
+}
+
+/* Message tổng */
 .form__error {
   background: #fee2e2;
   color: #991b1b;
@@ -367,11 +520,9 @@ input:focus {
   .register-card {
     padding: 20px;
   }
-  
-  input {
+  .input {
     padding: 10px 35px 10px 12px;
   }
-  
   .eye {
     right: 10px;
   }

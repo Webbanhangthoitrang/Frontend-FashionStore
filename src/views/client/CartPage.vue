@@ -1,533 +1,408 @@
 <template>
   <div class="cart-page">
-    <ClientHeader />
+    <!-- Header riêng -->
+    <CartHeader />
 
-    <main class="container">
-      <section v-if="requireLogin" class="state">
-        <h2>Vui lòng đăng nhập để xem giỏ hàng</h2>
-        <button class="btn" @click="goToLogin">Đăng nhập</button>
-      </section>
-
-      <section v-else-if="loading" class="state">
-        <p>Đang tải giỏ hàng…</p>
-      </section>
-
-      <section v-else-if="forbidden" class="state state--error">
-        <h2>{{ forbiddenMessage || 'Tài khoản của bạn không thể truy cập giỏ hàng.' }}</h2>
-        <button class="btn" @click="goToLogin">Đăng nhập tài khoản khách hàng</button>
-      </section>
-
-      <section v-else-if="loadError" class="state state--error">
-        <p>{{ loadError }}</p>
-        <button class="btn" @click="loadCart">Thử lại</button>
-      </section>
-
-      <section v-else class="layout">
-        <div v-if="feedback.message" :class="['notice', `notice--${feedback.type}`]">
-          {{ feedback.message }}
-        </div>
-        <div class="items" v-if="items.length">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Sản phẩm</th>
-                <th>Đơn giá</th>
-                <th>Số lượng</th>
-                <th>Thành tiền</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in items" :key="item.id">
-                <td class="product">
-                  <img :src="item.imageUrl || fallbackImage" alt="Ảnh sản phẩm" />
-                  <div class="product__info">
-                    <h3>{{ item.productName || 'Sản phẩm' }}</h3>
-                    <p v-if="item.color || item.size" class="muted">
-                      <span v-if="item.color">Màu: {{ item.color }}</span>
-                      <span v-if="item.color && item.size"> · </span>
-                      <span v-if="item.size">Size: {{ item.size }}</span>
-                    </p>
-                    <p v-if="item.sku" class="muted">SKU: {{ item.sku }}</p>
-                  </div>
-                </td>
-                <td>{{ formatCurrencyVND(item.price) }}</td>
-                <td>
-                  <div class="qty">
-                    <button @click="decrease(item)" :disabled="isUpdating(item.id) || item.quantity <= 1">–</button>
-                    <input
-                      type="number"
-                      min="1"
-                      :value="item.quantity"
-                      @change="onQuantityInput(item, $event.target.value)"
-                      :disabled="isUpdating(item.id)"
-                    />
-                    <button @click="increase(item)" :disabled="isUpdating(item.id)">+</button>
-                  </div>
-                </td>
-                <td>{{ formatCurrencyVND(item.price * item.quantity) }}</td>
-                <td class="actions">
-                  <button class="link" @click="remove(item)" :disabled="isDeleting(item.id)">
-                    Xóa
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+    <main class="cart-container">
+      <!-- === Page head: Icon (trái) + Title (phải) + Search === -->
+      <header class="page-head" aria-label="Tiêu đề trang giỏ hàng">
+        <div class="page-title-wrap">
+          <span class="bag-icon" aria-hidden="true">
+            <!-- SVG túi/giỏ màu xanh (giữ nguyên) -->
+            <svg width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M50 50L50 43.75C50 29.9429 61.1929 18.75 75 18.75C88.8071 18.75 100 29.9429 100 43.75L100 50" stroke="#4C80E6" stroke-width="10" stroke-linecap="round"/>
+              <path d="M91.25 43.75C110.106 43.75 119.535 43.7496 125.393 49.6074C131.25 55.4653 131.25 64.8938 131.25 83.75V97.5C131.25 116.356 131.25 125.785 125.393 131.643C119.535 137.5 110.106 137.5 91.25 137.5H58.75C39.8938 137.5 30.4653 137.5 24.6074 131.643C18.7496 125.785 18.75 116.356 18.75 97.5V83.75C18.75 64.8938 18.7496 55.4653 24.6074 49.6074C30.4653 43.7496 39.8938 43.75 58.75 43.75H91.25ZM56.25 70C53.4886 70 51.25 72.2386 51.25 75V98.5C51.25 101.261 53.4886 103.5 56.25 103.5C59.0114 103.5 61.25 101.261 61.25 98.5V75C61.25 72.2386 59.0114 70 56.25 70ZM93.75 70C90.9886 70 88.75 72.2386 88.75 75V98.5C88.75 101.261 90.9886 103.5 93.75 103.5C96.5114 103.5 98.75 101.261 98.75 98.5V75C98.75 72.2386 96.5114 70 93.75 70Z" fill="#4C80E6"/>
+            </svg>
+          </span>
+          <h1 class="page-title">Giỏ Hàng</h1>
         </div>
 
-        <div v-else class="empty">
-          <p>Giỏ hàng của bạn đang trống.</p>
-          <router-link class="btn" :to="{ name: 'home' }">Tiếp tục mua sắm</router-link>
+        <!-- Ô tìm kiếm (icon nằm trong ô, giống mẫu) -->
+        <div class="search-wrap">
+          <input
+            v-model.trim="search"
+            type="text"
+            class="search-input"
+            placeholder="Tìm kiếm sản phẩm trong giỏ hàng"
+            aria-label="Tìm kiếm sản phẩm trong giỏ hàng"
+          />
+          <button class="search-btn" type="button" aria-label="Tìm">
+            <!-- icon mảnh, xám, nhỏ -->
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="11" cy="11" r="7" stroke="#6B7280" stroke-width="2"/>
+              <path d="M20 20L16.65 16.65" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- === Bảng sản phẩm === -->
+      <section class="cart-table">
+        <div class="cart-table__head">
+          <label class="chk">
+            <input
+              type="checkbox"
+              :checked="allSelected"
+              :indeterminate.prop="isIndeterminate"
+              @change="toggleSelectAll"
+            />
+          </label>
+          <div class="col col-name">Sản phẩm</div>
+          <div class="col col-price">Đơn giá</div>
+          <div class="col col-qty">Số lượng</div>
+          <div class="col col-total">Số tiền</div>
+          <div class="col col-del"></div>
         </div>
 
-        <aside class="summary" v-if="items.length">
-          <h3>Tóm tắt đơn hàng</h3>
-          <div class="summary__row">
-            <span>Tạm tính</span>
-            <span>{{ formatCurrencyVND(subtotal) }}</span>
+        <div class="cart-table__body">
+          <div class="cart-row" v-for="item in filteredItems" :key="item.id">
+            <label class="chk">
+              <input
+                type="checkbox"
+                :checked="selectedIds.has(item.id)"
+                @change="onToggleItem(item.id, $event)"
+              />
+            </label>
+
+            <div class="col col-name">
+              <img :src="item.image" class="thumb" alt="" />
+              <div class="info">
+                <p class="title">{{ item.name }}</p>
+                <p class="variant">Phân loại: {{ item.variant }}</p>
+              </div>
+            </div>
+
+            <div class="col col-price">
+              {{ vnd(item.price) }}
+            </div>
+
+            <div class="col col-qty">
+              <div class="qty-control">
+                <button type="button" @click="decrease(item)">−</button>
+                <input
+                  type="text"
+                  :value="item.quantity"
+                  @change="updateQty(item, $event)"
+                />
+                <button type="button" @click="increase(item)">+</button>
+              </div>
+            </div>
+
+            <div class="col col-total red">
+              {{ vnd(item.price * item.quantity) }}
+            </div>
+
+            <div class="col col-del">
+              <button class="delete-btn" type="button" @click="remove(item)">
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
           </div>
-          <div class="summary__row">
-            <span>Phí vận chuyển</span>
-            <span>Miễn phí</span>
-          </div>
-          <div class="summary__total">
-            <span>Tổng cộng</span>
-            <span>{{ formatCurrencyVND(total) }}</span>
-          </div>
-          <button class="btn btn--primary" @click="checkout" :disabled="!items.length">Thanh toán</button>
-        </aside>
+        </div>
       </section>
+
+      <!-- === Footer === -->
+      <footer class="cart-footer">
+        <label class="chk">
+          <input
+            type="checkbox"
+            :checked="allSelected"
+            :indeterminate.prop="isIndeterminate"
+            @change="toggleSelectAll"
+          />
+          <span>Chọn tất cả ({{ items.length }})</span>
+        </label>
+
+        <div class="spacer"></div>
+
+        <div class="total">
+          <span>Tổng cộng ({{ selectedCount }} sản phẩm):</span>
+          <b class="red">{{ vnd(totalSelected) }}</b>
+        </div>
+
+        <button class="buy-btn" type="button" :disabled="selectedCount === 0">
+          Mua hàng
+        </button>
+      </footer>
     </main>
-
-    <ClientFooter />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import ClientHeader from '../../components/client/ClientHeaderLogged.vue';
-import ClientFooter from '../../components/client/ClientFooter.vue';
-import { getCart, updateItem, removeItem } from '../../services/cartService';
-import { formatCurrencyVND } from '../../utils/format';
-import { useAuthStore } from '../../stores/auth';
+import CartHeader from "../../components/client/CartHeader.vue";
+import { computed, reactive, ref } from "vue";
+import { useCart } from "../../services/cartService"; // KHÔNG dùng Pinia
 
-const router = useRouter();
-const { isLoggedIn, role } = useAuthStore();
-const isCustomerAccount = computed(() => {
-  const value = role.value;
-  return value === 'user' || value === 'customer' || value === 2;
+// Lấy state + actions từ service
+const { cartState, increase: inc, decrease: dec, setQty, remove: rm } = useCart();
+
+const search = ref("");
+const selectedIds = reactive(new Set());
+
+// ===== Helpers =====
+const vnd = (n) => `${(n || 0).toLocaleString("vi-VN")}đ`;
+
+// Items hiển thị từ state reactive
+const items = computed(() => cartState.items);
+
+const filteredItems = computed(() => {
+  if (!search.value) return items.value;
+  const q = search.value.toLowerCase();
+  return items.value.filter(
+    (i) =>
+      i.name.toLowerCase().includes(q) ||
+      (i.variant || "").toLowerCase().includes(q)
+  );
 });
 
-const loading = ref(true);
-const loadError = ref('');
-const requireLogin = ref(false);
-const forbidden = ref(false);
-const forbiddenMessage = ref('');
-const items = ref([]);
-const updatingItemIds = ref(new Set());
-const deletingItemIds = ref(new Set());
-const feedback = ref({ type: '', message: '' });
+// ===== Selection logic =====
+const selectedCount = computed(() =>
+  filteredItems.value.reduce((c, i) => (selectedIds.has(i.id) ? c + 1 : c), 0)
+);
+const totalSelected = computed(() =>
+  filteredItems.value.reduce(
+    (sum, i) => (selectedIds.has(i.id) ? sum + i.price * i.quantity : sum),
+    0
+  )
+);
+const allSelected = computed(
+  () =>
+    filteredItems.value.length > 0 &&
+    filteredItems.value.every((i) => selectedIds.has(i.id))
+);
+const isIndeterminate = computed(
+  () => selectedCount.value > 0 && selectedCount.value < filteredItems.value.length
+);
 
-const fallbackImage = 'https://via.placeholder.com/80x80?text=No+Image';
-
-const subtotal = computed(() => items.value.reduce((sum, item) => sum + item.price * item.quantity, 0));
-const total = computed(() => subtotal.value);
-
-function isUpdating(id) {
-  return updatingItemIds.value.has(id);
+function toggleSelectAll(e) {
+  const checked = e.target.checked;
+  filteredItems.value.forEach((i) =>
+    checked ? selectedIds.add(i.id) : selectedIds.delete(i.id)
+  );
 }
-function isDeleting(id) {
-  return deletingItemIds.value.has(id);
-}
-
-function markUpdating(id, active) {
-  const set = updatingItemIds.value;
-  const next = new Set(set);
-  if (active) next.add(id); else next.delete(id);
-  updatingItemIds.value = next;
-}
-
-function markDeleting(id, active) {
-  const set = deletingItemIds.value;
-  const next = new Set(set);
-  if (active) next.add(id); else next.delete(id);
-  deletingItemIds.value = next;
+function onToggleItem(id, e) {
+  if (e.target.checked) selectedIds.add(id);
+  else selectedIds.delete(id);
 }
 
-function setFeedback(type, message) {
-  feedback.value = message ? { type, message } : { type: '', message: '' };
-}
-
-function clearFeedback() {
-  setFeedback('', '');
-}
-
-async function loadCart() {
-  if (!isLoggedIn.value) {
-    requireLogin.value = true;
-    loading.value = false;
-    forbidden.value = false;
-    forbiddenMessage.value = '';
-    items.value = [];
-    setFeedback('', '');
-    return;
-  }
-
-  if (!isCustomerAccount.value) {
-    loading.value = false;
-    requireLogin.value = false;
-    forbidden.value = true;
-    forbiddenMessage.value = 'Giỏ hàng chỉ dành cho tài khoản khách hàng. Vui lòng đăng nhập bằng tài khoản khách hàng.';
-    items.value = [];
-    setFeedback('', '');
-    return;
-  }
-
-  loading.value = true;
-  loadError.value = '';
-  forbidden.value = false;
-  forbiddenMessage.value = '';
-  clearFeedback();
-  try {
-    const data = await getCart();
-    items.value = (data?.items || []).map((item) => ({
-      ...item,
-      price: Number(item.price) || 0,
-      quantity: Number(item.quantity) || 1,
-    }));
-  } catch (err) {
-    if (err?.status === 403) {
-      forbidden.value = true;
-      forbiddenMessage.value = 'Giỏ hàng chỉ dành cho tài khoản khách hàng. Vui lòng đăng nhập bằng tài khoản khách hàng.';
-      loadError.value = '';
-    } else {
-      loadError.value = err?.message || 'Không thể tải giỏ hàng.';
-    }
-  } finally {
-    loading.value = false;
-    requireLogin.value = false;
-  }
-}
-
-async function updateQuantity(item, quantity) {
-  const newQty = Number(quantity);
-  if (!Number.isFinite(newQty) || newQty < 1) return;
-  if (newQty === item.quantity) return;
-
-  clearFeedback();
-  markUpdating(item.id, true);
-  try {
-    await updateItem(item.id, newQty);
-    item.quantity = newQty;
-    setFeedback('success', 'Đã cập nhật số lượng sản phẩm.');
-  } catch (err) {
-    if (err?.status === 403) {
-      forbidden.value = true;
-      forbiddenMessage.value = 'Giỏ hàng chỉ dành cho tài khoản khách hàng. Vui lòng đăng nhập bằng tài khoản khách hàng.';
-      setFeedback('error', forbiddenMessage.value);
-    } else {
-      setFeedback('error', err?.message || 'Không thể cập nhật số lượng.');
-    }
-  } finally {
-    markUpdating(item.id, false);
-  }
-}
-
-function decrease(item) {
-  updateQuantity(item, item.quantity - 1);
-}
+// ===== Quantity / Remove =====
 function increase(item) {
-  updateQuantity(item, item.quantity + 1);
+  inc(item.id);
 }
-function onQuantityInput(item, value) {
-  updateQuantity(item, value);
+function decrease(item) {
+  dec(item.id);
 }
-
-async function remove(item) {
-  if (!confirm('Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?')) {
-    return;
-  }
-  clearFeedback();
-  markDeleting(item.id, true);
-  try {
-    await removeItem(item.id);
-    items.value = items.value.filter((cartItem) => cartItem.id !== item.id);
-    setFeedback('success', 'Đã xóa sản phẩm khỏi giỏ hàng.');
-  } catch (err) {
-    if (err?.status === 403) {
-      forbidden.value = true;
-      forbiddenMessage.value = 'Giỏ hàng chỉ dành cho tài khoản khách hàng. Vui lòng đăng nhập bằng tài khoản khách hàng.';
-      setFeedback('error', forbiddenMessage.value);
-    } else {
-      setFeedback('error', err?.message || 'Không thể xóa sản phẩm.');
-    }
-  } finally {
-    markDeleting(item.id, false);
-  }
+function updateQty(item, e) {
+  const n = parseInt(e.target.value);
+  setQty(item.id, isNaN(n) ? 1 : n);
 }
-
-function checkout() {
-  clearFeedback();
-  setFeedback('info', 'Chức năng thanh toán đang được phát triển.');
+function remove(item) {
+  rm(item.id);
+  selectedIds.delete(item.id);
 }
-
-function goToLogin() {
-  router.push({ name: 'login', query: { redirect: '/cart' } });
-}
-
-onMounted(() => {
-  loadCart();
-});
-
-watch(isLoggedIn, (loggedIn) => {
-  if (loading.value) return;
-  if (loggedIn) {
-    loadCart();
-  } else {
-    items.value = [];
-    requireLogin.value = true;
-    forbidden.value = false;
-    forbiddenMessage.value = '';
-    clearFeedback();
-  }
-});
-
-watch(role, () => {
-  if (!loading.value && isLoggedIn.value) {
-    loadCart();
-  }
-});
 </script>
 
 <style scoped>
-.cart-page {
-  min-height: 100vh;
-  background: #f9fafb;
+.cart-container {
+  width: 960px;
+  margin: 20px auto 40px;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 24px auto 48px;
-  padding: 0 24px;
-}
-
-.state {
-  background: #fff;
-  padding: 48px 32px;
-  text-align: center;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px -20px rgba(15, 23, 42, 0.35);
-  color: #1f2937;
+/* ===== Page head ===== */
+.page-head {
   display: grid;
-  gap: 16px;
-}
-.state--error {
-  color: #b91c1c;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 14px;
 }
 
-.btn {
+/* Icon + chữ hàng ngang */
+.page-title-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.page-title {
+  font-size: 25px;
+  color: #4f7cff;
+  margin: 0;
+}
+.bag-icon {
+  width: 100px;
+  height:100px;
+  color: #4f7cff;
+  display: inline-flex;
+}
+.bag-icon :where(svg) {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ===== Search (theo mẫu bạn gửi) ===== */
+.search-wrap {
+  position: relative;
+  justify-self: center;
+  width: 520px;
+  max-width: 100%;
+}
+.search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 40px 0 14px;   /* chừa chỗ cho icon */
+  border: 1px solid #E5E7EB; /* viền xám nhạt */
+  border-radius: 6px;        /* bo nhẹ */
+  outline: none;
+  background: #fff;
+  font-size: 14px;
+  color: #111827;
+}
+.search-input::placeholder {
+  color: #9CA3AF;
+}
+.search-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 24px;
+  width: 24px;
   border: none;
-  border-radius: 999px;
-  padding: 10px 24px;
-  font-weight: 700;
-  background: #4f46e5;
-  color: #fff;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  text-decoration: none;
+  background: transparent;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
-.btn:hover {
-  transform: translateY(-1px);
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.search-btn:active {
+  transform: translateY(-50%) scale(0.98);
 }
 
-.layout {
-  display: grid;
-  gap: 24px;
-  grid-template-columns: 1fr 320px;
-  align-items: start;
-}
-
-.notice {
-  grid-column: 1 / -1;
-  padding: 12px 16px;
-  border-radius: 14px;
-  font-weight: 600;
-  font-size: 14px;
-}
-.notice--success {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-.notice--error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-.notice--info {
-  background: #e0f2fe;
-  color: #0c4a6e;
-  border: 1px solid #bae6fd;
-}
-
-.items {
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px 20px;
-  box-shadow: 0 10px 40px -20px rgba(15, 23, 42, 0.25);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.table th,
-.table td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-}
-.table thead th {
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #6b7280;
-}
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.product {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-}
-.product img {
-  width: 72px;
-  height: 72px;
-  object-fit: cover;
-  border-radius: 12px;
-  background: #f3f4f6;
-}
-.product__info h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  color: #111827;
-}
-.product__info .muted {
-  margin: 0;
-  color: #6b7280;
-  font-size: 13px;
-}
-
-.qty {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
+/* ===== Bảng ===== */
+.cart-table {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
   overflow: hidden;
 }
-.qty button {
-  width: 36px;
-  height: 36px;
+.cart-table__head,
+.cart-row {
+  display: grid;
+  grid-template-columns: 36px 1.3fr 0.5fr 0.6fr 0.6fr 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+}
+.cart-table__head {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+.cart-row {
+  border-top: 1px solid #f1f5f9;
+}
+.cart-row:hover {
+  background: #fafafa;
+}
+
+.thumb {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+.col-name {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.info .title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.info .variant {
+  color: #666;
+  font-size: 13px;
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  width: fit-content;
+}
+.qty-control button {
+  width: 28px;
+  height: 28px;
   border: none;
-  background: transparent;
+  background: #f3f4f6;
   cursor: pointer;
-  font-size: 18px;
-  color: #1f2937;
+  font-size: 16px;
 }
-.qty button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-.qty input {
-  width: 48px;
-  border: none;
+.qty-control input {
+  width: 40px;
   text-align: center;
-  font-size: 15px;
-  padding: 0;
+  border: none;
   outline: none;
 }
 
-.actions {
-  text-align: right;
-}
-.actions .link {
-  border: none;
-  background: none;
-  color: #ef4444;
-  cursor: pointer;
+.red {
+  color: #e11d48;
   font-weight: 600;
 }
-.actions .link:disabled {
-  opacity: 0.5;
+
+.delete-btn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+}
+
+/* ===== Footer ===== */
+.cart-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 16px;
+  background: #fff;
+}
+.chk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.total {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.buy-btn {
+  background: #e11d48;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  height: 40px;
+  width: 120px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.buy-btn:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
   cursor: not-allowed;
 }
-
-.empty {
-  grid-column: 1 / -1;
-  background: #fff;
-  border-radius: 16px;
-  padding: 48px;
-  text-align: center;
-  box-shadow: 0 10px 40px -20px rgba(15, 23, 42, 0.35);
-  display: grid;
-  gap: 16px;
-}
-.empty p {
-  margin: 0;
-  font-size: 18px;
-  color: #4b5563;
-}
-
-.summary {
-  background: #111827;
-  color: #fff;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.45);
-  position: sticky;
-  top: 100px;
-}
-.summary h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 20px;
-}
-.summary__row,
-.summary__total {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 15px;
-}
-.summary__total {
-  font-size: 18px;
-  font-weight: 700;
-  border-top: 1px solid rgba(255,255,255,0.2);
-  padding-top: 12px;
-  margin-top: 12px;
-}
-.btn--primary {
-  width: 100%;
-  margin-top: 20px;
-}
-
-@media (max-width: 992px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .summary {
-    position: static;
-  }
+.spacer {
+  flex: 1;
 }
 </style>
