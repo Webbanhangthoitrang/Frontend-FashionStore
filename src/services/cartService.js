@@ -2,120 +2,155 @@
 import { reactive } from "vue";
 import { request } from "./http";
 
-/** State reactive dùng chung */
+/* ===== STATE ===== */
 const cartState = reactive({
-  // Mỗi item kỳ vọng dạng: { id, productVariantId, name, variant, price, quantity, image }
+  // { id, productId, productVariantId, name, variant, price, quantity, image }
   items: [],
 });
 
-/** Chuẩn hoá dữ liệu item từ backend về cấu trúc UI cần */
-function mapApiItem(it) {
-  // tuỳ payload thực tế của bạn, chỉnh các key dưới đây cho khớp:
+/* ===== UTILS ===== */
+const toNumberSafe = (v) => {
+  const n = Number(String(v ?? 0).replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+
+/* Map một item từ /cart */
+function mapCartItemRaw(it) {
   return {
-    id: it.id ?? it.itemId, // id của dòng cart
-    productVariantId: it.productVariantId ?? it.variantId,
+    id: it.id ?? it.itemId,
+    productId: it.productId ?? it.product?.id ?? null,
+    productVariantId:
+      it.productVariantId ?? it.variantId ?? it.productVariant?.id ?? null,
     name: it.name ?? it.productName ?? it.product?.name ?? "Sản phẩm",
     variant:
-      it.variant ??
-      [it.color, it.size, it.optionName].filter(Boolean).join(", "),
-    price:
-      Number(String(it.price ?? it.salePrice ?? 0).replace(/[^\d.-]/g, "")) || 0,
+      it.variant?.name ??
+      [it.variant?.color, it.variant?.size, it.color, it.size, it.optionName]
+        .filter(Boolean)
+        .join(", "),
+    price: toNumberSafe(it.price ?? it.salePrice ?? it.unitPrice ?? 0),
     quantity: Number.parseInt(it.quantity, 10) || 1,
-    image: it.image ?? it.thumbnail ?? it.product?.thumbnail ?? "",
+    image: it.imageUrl || it.image || it.product?.imageUrl || "",
   };
 }
 
-/** Lấy giỏ hàng từ server */
+/* Bổ sung ảnh/thuộc tính từ /products/{id} khi item chưa có ảnh */
+async function enrichWithProduct(item) {
+  if (item.image || !item.productId) return item;
+
+  try {
+    const res = await request(`/products/${item.productId}`, { method: "GET" });
+    const product = res?.data?.data || res?.data || {};
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const v =
+      variants.find((x) => x.id === item.productVariantId) ||
+      variants[0] ||
+      {};
+
+    return {
+      ...item,
+      name: item.name || product.name || "Sản phẩm",
+      variant: item.variant || [v.color, v.size].filter(Boolean).join(", "),
+      price: item.price > 0 ? item.price : toNumberSafe(v.price ?? product.price),
+      image: v.imageUrl || product.imageUrl || product.thumbnail || "",
+    };
+  } catch {
+    return item;
+  }
+}
+
+/* ===== PUBLIC API ===== */
+
+/** Lấy giỏ hàng hiện tại */
 export async function fetchCart() {
-  const { data } = await request("/cart", { method: "GET" });
-  const items =
-    Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-  cartState.items = items.map(mapApiItem);
+  const res = await request("/cart", { method: "GET" });
+  const raw =
+    Array.isArray(res?.items)
+      ? res.items
+      : Array.isArray(res?.data?.items)
+      ? res.data.items
+      : Array.isArray(res)
+      ? res
+      : [];
+  let items = raw.map(mapCartItemRaw);
+  items = await Promise.all(items.map(enrichWithProduct));
+  cartState.items = items;
   return cartState.items;
 }
 
-/** Thêm sản phẩm vào giỏ (API yêu cầu productVariantId + quantity) */
+/** Thêm sản phẩm vào giỏ */
 export async function addItem(productVariantId, quantity = 1) {
   const pid = Number(productVariantId);
   const qty = Number.parseInt(quantity, 10);
 
-  // Validate chặt chẽ để tránh 400
-  if (!Number.isInteger(pid) || pid <= 0) {
-    throw new Error(
-      `Payload không hợp lệ: productVariantId=${productVariantId}`
-    );
-  }
-  if (!Number.isInteger(qty) || qty <= 0) {
+  if (!Number.isInteger(pid) || pid <= 0)
+    throw new Error(`Payload không hợp lệ: productVariantId=${productVariantId}`);
+  if (!Number.isInteger(qty) || qty <= 0)
     throw new Error(`Payload không hợp lệ: quantity=${quantity}`);
-  }
 
   await request("/cart", {
     method: "POST",
-    body: { productVariantId: pid, quantity: qty },
+    data: { productVariantId: pid, quantity: qty }, // ✅ đổi sang data
   });
 
-  // backend đã thay đổi giỏ -> refetch để đồng bộ UI
   await fetchCart();
 }
 
-/** Cập nhật số lượng một dòng giỏ */
+/** Cập nhật số lượng */
 export async function updateItem(itemId, quantity) {
   const qty = Math.max(1, Number.parseInt(quantity, 10) || 1);
-
   await request(`/cart/${itemId}`, {
     method: "PUT",
-    body: { quantity: qty },
+    data: { quantity: qty }, // ✅ đổi sang data
   });
 
-  // cập nhật local ngay để UI mượt
   const it = cartState.items.find((i) => i.id === itemId);
   if (it) it.quantity = qty;
 }
 
-/** Xoá một dòng giỏ */
+/** Xoá item khỏi giỏ */
 export async function removeItem(itemId) {
   await request(`/cart/${itemId}`, { method: "DELETE" });
   cartState.items = cartState.items.filter((i) => i.id !== itemId);
 }
 
-/** Các thao tác tiện lợi cho CartPage (local trước, rồi sync API) */
+/** Tăng số lượng */
 export async function increase(itemId) {
   const it = cartState.items.find((i) => i.id === itemId);
-  if (it) {
-    const next = (Number.parseInt(it.quantity, 10) || 1) + 1;
-    it.quantity = next;
-    await updateItem(itemId, next);
-  }
+  if (!it) return;
+  const next = (Number.parseInt(it.quantity, 10) || 1) + 1;
+  it.quantity = next;
+  await updateItem(itemId, next);
 }
 
+/** Giảm số lượng */
 export async function decrease(itemId) {
   const it = cartState.items.find((i) => i.id === itemId);
-  if (it) {
-    const next = Math.max(1, (Number.parseInt(it.quantity, 10) || 1) - 1);
-    it.quantity = next;
-    await updateItem(itemId, next);
-  }
+  if (!it) return;
+  const next = Math.max(1, (Number.parseInt(it.quantity, 10) || 1) - 1);
+  it.quantity = next;
+  await updateItem(itemId, next);
 }
 
+/** Đặt lại số lượng */
 export async function setQty(itemId, qty) {
   const next = Math.max(1, Number.parseInt(qty, 10) || 1);
   const it = cartState.items.find((i) => i.id === itemId);
-  if (it) {
-    it.quantity = next;
-    await updateItem(itemId, next);
-  }
+  if (!it) return;
+  it.quantity = next;
+  await updateItem(itemId, next);
 }
 
+/** Xoá toàn bộ giỏ hàng local */
 export function clearLocal() {
   cartState.items = [];
 }
 
-/** Hook dùng trong component */
+/** Hook tiện dụng cho các component */
 export function useCart() {
   return {
     cartState,
     fetchCart,
-    addItem, // có thể import { addItem } từ cartService để gọi ở ProductDetail
+    addItem,
     updateItem,
     removeItem,
     increase,

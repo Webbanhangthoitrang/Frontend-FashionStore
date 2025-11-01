@@ -53,10 +53,12 @@
           v-if="isLoggedIn" 
           class="header__user"
         >
-          <!-- Thông báo -->
-          <router-link 
-            to="/notifications" 
-            class="header__user-link"
+          <!-- Thông báo (mở popup, không điều hướng route) -->
+          <button 
+            type="button" 
+            class="header__user-link" 
+            @click="toggleNoti" 
+            aria-haspopup="dialog"
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -72,7 +74,14 @@
               <path d="M21 19H3l2-2v-5a7 7 0 1 1 14 0v5l2 2z"/>
             </svg>
             <span>Thông báo</span>
-          </router-link>
+          </button>
+
+          <!-- Popup thông báo -->
+          <NotificationPopup 
+            v-if="showNoti"
+            :items="notifications"
+            @close="showNoti = false"
+          />
 
           <!-- Tên người dùng -->
           <router-link 
@@ -179,14 +188,61 @@
 </template>
 
 <script setup>
+import NotificationPopup from '../../components/client/NotificationPopup.vue'
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore, clearAuth } from '../../stores/auth'
+import { getNotifications } from '../../services/notificationService'
 
 const keyword = ref('')
 const router = useRouter()
 const route = useRoute()
 const { state, isLoggedIn } = useAuthStore()
+const showNoti = ref(false)
+const rawNoti = ref([])
+
+// Chuyển dữ liệu API -> đúng format cho NotificationPopup
+const notifications = computed(() =>
+  (rawNoti.value || []).map(n => ({
+    id: n.id || n._id,
+    emoji: n.emoji || '',
+    title: n.title || n.heading || 'Thông báo',
+    desc: n.message || n.content || '',
+    time: formatTime(n.createdAt || n.time || n.created_date),
+    icon: n.iconUrl || n.icon || '',
+    read: !!(n.read || n.isRead),
+  }))
+)
+
+function formatTime(t) {
+  if (!t) return ''
+  const d = new Date(t)
+  const dd = String(d.getDate()).padStart(2,'0')
+  const mm = String(d.getMonth()+1).padStart(2,'0')
+  const yyyy = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2,'0')
+  const mi = String(d.getMinutes()).padStart(2,'0')
+  return `${dd}/${mm}/${yyyy} - ${hh}:${mi}`
+}
+
+async function fetchNotifications() {
+  try {
+    const res = await getNotifications()
+    rawNoti.value =
+      Array.isArray(res) ? res :
+      Array.isArray(res?.data) ? res.data :
+      Array.isArray(res?.items) ? res.items :
+      Array.isArray(res?.data?.items) ? res.data.items : []
+  } catch (e) {
+    console.error('Không tải được thông báo', e)
+    rawNoti.value = []
+  }
+}
+
+const toggleNoti = async () => {
+  showNoti.value = !showNoti.value
+  if (showNoti.value) await fetchNotifications()
+}
 
 watch(
   () => route.query.q,
@@ -351,7 +407,7 @@ function logout() {
   list-style: none;
   margin: 0;
   padding: 0;
-  margin-left: 170px; /* căn thẳng ô search */
+  margin-left: 170px;
 }
 .menu__link {
   color: #fff;

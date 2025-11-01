@@ -1,3 +1,4 @@
+<!-- src/pages/client/ProductDetail.vue -->
 <template>
   <div class="detail">
     <ClientHeader />
@@ -97,6 +98,7 @@
               :disabled="actionLoading"
             >
               <div>
+                <!-- Icon giữ nguyên theo mã của bạn -->
                 <svg
                   width="72"
                   height="72"
@@ -143,7 +145,7 @@
         </section>
       </div>
 
-      <!-- MÔ TẢ + ĐÁNH GIÁ GIỮ NGUYÊN -->
+      <!-- MÔ TẢ SẢN PHẨM -->
       <section class="desc">
         <h2 class="desc__title">MÔ TẢ SẢN PHẨM</h2>
         <div v-if="descriptionParagraphs.length" class="desc__content">
@@ -153,25 +155,110 @@
         </div>
         <p v-else class="desc__empty">Chưa có mô tả chi tiết cho sản phẩm này.</p>
       </section>
+
+      <!-- =================== ĐÁNH GIÁ SẢN PHẨM =================== -->
+      <section class="reviews">
+        <h2 class="reviews__title">ĐÁNH GIÁ SẢN PHẨM</h2>
+
+        <div v-if="reviewLoading" class="state">Đang tải đánh giá…</div>
+        <div v-else-if="reviewError" class="state state--error">{{ reviewError }}</div>
+        <div v-else-if="!pagedReviews.length" class="state">Chưa có đánh giá nào.</div>
+
+        <!-- Danh sách đánh giá -->
+        <div
+          v-for="r in pagedReviews"
+          :key="r.id"
+          class="review-card"
+        >
+          <div class="review-card__left">
+            <div class="avatar">
+              <img
+                v-if="r.avatarUrl"
+                :src="r.avatarUrl"
+                alt="Avatar người dùng"
+                class="avatar-img"
+              />
+              <svg
+                v-else
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                stroke="currentColor"
+                fill="none"
+                stroke-width="1.5"
+              >
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+              </svg>
+            </div>
+
+            <div class="info">
+              <div class="name">{{ r.name }}</div>
+              <div class="stars">
+                <span
+                  v-for="i in 5"
+                  :key="i"
+                  class="star"
+                  :class="{ on: i <= r.rating }"
+                >★</span>
+              </div>
+              <p class="text">
+                {{ r.text }}
+              </p>
+
+              <!-- Ảnh review -->
+              <div v-if="r.photos && r.photos.length" class="review-photos">
+                <img
+                  v-for="(p, idx) in r.photos"
+                  :key="idx"
+                  :src="p"
+                  alt="Ảnh đánh giá"
+                  class="review-photo"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phân trang -->
+        <nav class="pagination" v-if="totalPages > 1">
+          <button class="page-nav" :disabled="page === 1" @click="go(page - 1)">‹</button>
+          <button
+            v-for="p in totalPages"
+            :key="p"
+            class="page"
+            :class="{ active: p === page }"
+            @click="go(p)"
+          >
+            {{ p }}
+          </button>
+          <button class="page-nav" :disabled="page === totalPages" @click="go(page + 1)">›</button>
+        </nav>
+      </section>
     </main>
 
     <ClientFooter />
   </div>
 </template>
+
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-// ❌ BỎ: import { storeToRefs } from "pinia";
 
+// Components
 import ClientHeader from "../../components/client/ClientHeaderLogged.vue";
 import ClientFooter from "../../components/client/ClientFooter.vue";
+
+// Services
 import { getProductById } from "../../services/productService";
 import { addItem } from "../../services/cartService";
 import { useAuthStore } from "../../stores/auth";
+import { getReviewsByProductId } from "../../services/reviewService";
 
 const route = useRoute();
 const router = useRouter();
 
+/* ===== State ===== */
 const product = ref(null);
 const loading = ref(true);
 const error = ref("");
@@ -186,10 +273,7 @@ const actionLoading = ref(false);
 
 /* ===== Auth (Pinia) ===== */
 const auth = useAuthStore();
-// Lấy reactivity KHÔNG cần storeToRefs
 const isLoggedIn = computed(() => auth.isLoggedIn);
-const role = computed(() => auth.role);
-const isCustomerAccount = computed(() => ["user", "customer", 2].includes(role.value));
 
 /* ===== Computed dữ liệu sản phẩm ===== */
 const gallery = computed(() => product.value?.gallery || []);
@@ -213,7 +297,7 @@ const activeImage = computed(() =>
   ""
 );
 
-/* Mô tả – luôn là mảng để dùng .length */
+/* Mô tả */
 const descriptionParagraphs = computed(() => {
   const raw = product.value?.description || "";
   return String(raw)
@@ -290,14 +374,6 @@ async function performCartAction(redirectToCart = false) {
     return;
   }
 
-  if (!isCustomerAccount.value) {
-    actionStatus.value = {
-      type: "error",
-      message: "Tài khoản quản trị không thể sử dụng giỏ hàng. Vui lòng dùng tài khoản khách hàng.",
-    };
-    return;
-  }
-
   const variantId = Number(selectedVariant.value?.id);
   if (!variantId) {
     actionStatus.value = { type: "error", message: "Không tìm thấy biến thể phù hợp." };
@@ -314,6 +390,7 @@ async function performCartAction(redirectToCart = false) {
 
   actionLoading.value = true;
   try {
+    // giữ nguyên logic thêm giỏ
     await addItem(variantId, quantity);
     actionStatus.value = { type: "success", message: "Sản phẩm đã được thêm vào giỏ hàng." };
     if (redirectToCart) router.push({ path: "/cart" });
@@ -326,7 +403,35 @@ async function performCartAction(redirectToCart = false) {
 }
 
 function addToCart() { performCartAction(false); }
-function buyNow() { performCartAction(true); }
+
+/* >>> MUA NGAY: điều hướng thẳng sang checkout, không thêm giỏ <<< */
+async function buyNow() {
+  if (!isLoggedIn.value) {
+    actionStatus.value = { type: "warning", message: "Vui lòng đăng nhập để mua hàng." };
+    router.push({ name: "login", query: { redirect: route.fullPath } });
+    return;
+  }
+
+  const variantId = Number(selectedVariant.value?.id);
+  if (!variantId) {
+    actionStatus.value = { type: "error", message: "Không tìm thấy biến thể phù hợp." };
+    return;
+  }
+
+  const safeQty = Math.max(1, Number.parseInt(qty.value, 10) || 1);
+
+  actionLoading.value = true;
+  try {
+    await addItem(variantId, safeQty); // ✅ thêm sản phẩm vào giỏ
+    router.push({ path: "/checkout", query: { source: "buynow" } }); // ✅ điều hướng sang checkout
+  } catch (err) {
+    console.error("Lỗi khi mua ngay:", err);
+    actionStatus.value = { type: "error", message: err?.message || "Không thể mua ngay." };
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
 
 /* ===== Load sản phẩm ===== */
 async function loadProduct() {
@@ -346,16 +451,134 @@ async function loadProduct() {
   }
 }
 
-onMounted(loadProduct);
+/* ====================== PHẦN REVIEW ====================== */
+const reviews = ref([]);
+const page = ref(1);
+const pageSize = 3;
+const totalReviews = ref(0);
+const reviewLoading = ref(false);
+const reviewError = ref("");
+
+const totalPages = computed(() => {
+  const t = Math.ceil((totalReviews.value || 0) / pageSize);
+  return t > 0 ? t : 1;
+});
+
+const pagedReviews = computed(() => reviews.value);
+
+function normalizeReviews(arr = []) {
+  return arr.map((r, idx) => {
+    const user = r.user || r.account || r.author || r.createdBy || r.customer || null;
+
+    const name =
+      user?.fullName ||
+      user?.name ||
+      user?.displayName ||
+      user?.username ||
+      r.userName ||
+      r.authorName ||
+      r.name ||
+      (user?.email ? user.email.split("@")[0] : null) ||
+      (r.email ? r.email.split("@")[0] : null) ||
+      "Ẩn danh";
+
+    const avatarUrl =
+      user?.avatarUrl ||
+      user?.photoUrl ||
+      r.avatarUrl ||
+      r.userAvatar ||
+      r.avatar ||
+      "";
+
+    const photos = Array.isArray(r.photos)
+      ? r.photos
+      : r.photo
+      ? [r.photo]
+      : r.imageUrl
+      ? [r.imageUrl]
+      : r.photoUrl
+      ? [r.photoUrl]
+      : [];
+
+    return {
+      id: r.id ?? r.reviewId ?? `${r.userId ?? "u"}-${r.createdAt ?? idx}`,
+      name,
+      avatarUrl,
+      rating: Number(r.rating ?? r.stars ?? 0),
+      text: r.comment ?? r.content ?? r.text ?? "",
+      photos
+    };
+  });
+}
+
+async function loadReviews() {
+  reviewLoading.value = true;
+  reviewError.value = "";
+  try {
+    const productId = route.params.id;
+    const res = await getReviewsByProductId(productId, { page: page.value, pageSize });
+
+    const payload = res?.data ?? res;
+    const list =
+      res?.items ??
+      payload?.items ??
+      payload?.results ??
+      payload?.data ??
+      (Array.isArray(payload) ? payload : []);
+
+    const total =
+      (typeof res?.total === "number" ? res.total : undefined) ??
+      (typeof payload?.total === "number" ? payload.total : undefined) ??
+      (typeof payload?.count === "number" ? payload.count : undefined) ??
+      list.length;
+
+    reviews.value = normalizeReviews(list);
+    totalReviews.value = total || 0;
+  } catch (e) {
+    console.error("Không tải được đánh giá sản phẩm:", e);
+    reviewError.value = e?.message || "Không tải được đánh giá sản phẩm.";
+    reviews.value = [];
+    totalReviews.value = 0;
+  } finally {
+    reviewLoading.value = false;
+  }
+}
+
+function go(p) {
+  if (p < 1 || p > totalPages.value || p === page.value) return;
+  page.value = p;
+  loadReviews();
+}
+
+/* ===== Mounted & watchers ===== */
+onMounted(() => {
+  loadProduct();
+  loadReviews();
+});
+
+watch(() => route.params.id, () => {
+  page.value = 1;
+  loadReviews();
+});
+
+watch(selectedVariant, () => {
+  qty.value = 1;
+  resetActionStatus();
+}, { immediate: true });
+
+watch(qty, (value, oldValue) => {
+  if (value === oldValue) return;
+  if (value < 1) qty.value = 1;
+  if (maxQty.value !== null && qty.value > maxQty.value) {
+    qty.value = maxQty.value || 1;
+  }
+  resetActionStatus();
+});
+
+watch([color, size], () => {
+  resetActionStatus();
+});
 </script>
-
-
-
-<style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Khula:wght@400;600;700&display=swap");
-/* Giữ nguyên toàn bộ CSS bạn gửi */
-</style>
-
 
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Khula:wght@400;600;700&display=swap");
@@ -541,7 +764,6 @@ onMounted(loadProduct);
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
-  
 }
 .btn {
   border: none;
@@ -551,7 +773,7 @@ onMounted(loadProduct);
   font-weight: 700;
   cursor: pointer;
 }
-.btn.outline { background: #ebf2ff; color: #e60000; border: 1px solid #4c80e6;display: flex;flex-direction: r; }
+.btn.outline { background: #ebf2ff; color: #e60000; border: 1px solid #4c80e6; display: flex; }
 .btn.primary { background: #ef4444; color: #fff; }
 .btn.outline:hover { background: #cedfff; }
 .btn.primary:hover { background: #dc2626; }
@@ -586,6 +808,7 @@ onMounted(loadProduct);
 }
 .desc__empty { color: #9ca3af; font-style: italic; font-size: 14px; }
 
+/* Bảng biến thể – nếu dùng */
 .variants {
   width: 100%;
   border-collapse: collapse;
@@ -605,7 +828,7 @@ onMounted(loadProduct);
 .reviews {
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 2px solid #ffffff; /* như ảnh nền sáng */
+  border-top: 2px solid #ffffff;
 }
 .reviews__title {
   font-size: 18px;
@@ -626,15 +849,17 @@ onMounted(loadProduct);
   background: #ffffff;
   border-radius: 12px;
   border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
-              0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   margin-bottom: 16px;
 }
 .review-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12),
-              0 3px 8px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.12),
+    0 3px 8px rgba(0, 0, 0, 0.08);
 }
 .review-card__left {
   display: grid;
