@@ -1,7 +1,7 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 
-// ====== Import các trang chính ======
+// ====== CLIENT ======
 import HomeClient from '../views/client/HomeClient.vue'
 import RegisterClient from '../views/client/RegisterClient.vue'
 import LoginClient from '../views/client/LoginClient.vue'
@@ -10,7 +10,14 @@ import CategoryPage from '../views/client/CategoryPage.vue'
 import CheckoutPage from '../views/client/CheckoutPage.vue'
 import ChangePassword from '../views/client/ChangePassword.vue'
 
-// ====== Cấu hình routes ======
+// ====== ADMIN (lazy load) ======
+const AdminUserManage = () => import('../views/admin/UserManage.vue')
+const AdminProductManage = () => import('../views/admin/ProductManage.vue')
+const UserDetail = () => import('../views/admin/UserDetail.vue')
+// const AdminProductCreate = () => import('../views/admin/ProductCreate.vue')
+// const AdminProductEdit = () => import('../views/admin/ProductEdit.vue')
+
+// ====== ROUTES ======
 const routes = [
   // 🏠 Trang chủ
   { path: '/', name: 'home', component: HomeClient },
@@ -68,11 +75,11 @@ const routes = [
   },
 
   // 🛍 Chi tiết sản phẩm
-    {
+  {
     path: '/product/:id(\\d+)',
     name: 'ProductDetail',
     component: () => import('../views/client/ProductDetail.vue'),
-    props: route => ({ id: Number(route.params.id) }),
+    props: (route) => ({ id: Number(route.params.id) }),
   },
 
   // 📂 Danh mục sản phẩm
@@ -109,15 +116,16 @@ const routes = [
     meta: { requiresAuth: true },
   },
 
-  // Đổi mật khẩu
-    {
-    path: '/account/password',                 
-    alias: ['/account/change-password'],     
+  // 🔐 Đổi mật khẩu
+  {
+    path: '/account/password',
+    alias: ['/account/change-password'],
     name: 'account.password',
     component: ChangePassword,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
-  //Đơn mua
+
+  // 🧾 Đơn mua
   {
     path: '/account/orders',
     name: 'account.orders',
@@ -132,23 +140,66 @@ const routes = [
     component: CheckoutPage,
     meta: { requiresAuth: true },
   },
+
+  // ====== ADMIN ======
+
+  // 👥 Quản lý người dùng
+  {
+    path: '/admin/users',
+    name: 'AdminUserManage',
+    component: AdminUserManage,
+    meta: { requiresAuth: true }, // tùy bạn thêm kiểm tra admin
+  },
+
+  // 🛍 Quản lý sản phẩm (màn giống design bạn gửi)
+  {
+    path: '/admin/products',
+    name: 'AdminProductManage',
+    component: AdminProductManage,
+    meta: { requiresAuth: true },
+  },
+
+  // ➕ Tạo sản phẩm
+// {
+//   path: '/admin/products/create',
+//   name: 'AdminProductCreate',
+//   component: AdminProductCreate,
+//   meta: { requiresAuth: true },
+// },
+
+// ✏️ Sửa sản phẩm
+// {
+//   path: '/admin/products/:id/edit',
+//   name: 'AdminProductEdit',
+//   component: AdminProductEdit,
+//   meta: { requiresAuth: true },
+//   props: true,
+// },
+
+  {
+  path: '/admin/users/:id',
+  name: 'AdminUserDetail',
+  component: UserDetail,
+  meta: { requiresAuth: true },
+  props: true,
+},
+
 ]
 
-// ====== Khởi tạo router ======
+// ====== TẠO ROUTER ======
 const router = createRouter({
   history: createWebHistory(),
   routes,
 })
 
-// ====== Middleware kiểm tra đăng nhập ======
+// ====== CHECK LOGIN CƠ BẢN ======
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('authToken')
   if (to.meta.requiresAuth && !token) {
-    next({ name: 'login' })
+    next({ name: 'login', query: { redirect: to.fullPath } })
   } else {
     next()
   }
 })
 
-// ====== Xuất router ======
 export default router

@@ -159,3 +159,6 @@ export function useCart() {
     clearLocal,
   };
 }
+
+/** Export cartState để sử dụng trực tiếp */
+export { cartState };

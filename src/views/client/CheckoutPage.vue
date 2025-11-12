@@ -42,7 +42,12 @@
             </label>
           </div>
 
-          <!-- Link “+ Thêm địa chỉ giao hàng” đặt dưới phần địa chỉ -->
+          <!-- Thông báo khi chưa có địa chỉ -->
+          <div v-else class="state state--warning" style="color: #f59e0b; background: #fffbeb; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+            ⚠️ Bạn chưa có địa chỉ giao hàng. Vui lòng thêm địa chỉ để tiếp tục đặt hàng.
+          </div>
+
+          <!-- Link "+ Thêm địa chỉ giao hàng" đặt dưới phần địa chỉ -->
           <button class="add-link" type="button" @click="openAddressListPopup">
             <span class="plus">+</span> Thêm địa chỉ giao hàng
           </button>
@@ -257,10 +262,13 @@ async function loadItems () {
   try {
     await fetchCart()
     let list = Array.isArray(cartState.items) ? cartState.items : []
-    if (source.value === 'cart' && selectedIdsFromQuery.value.length > 0) {
+    
+    // Lọc theo selected IDs cho cả 'cart' và 'buynow'
+    if (selectedIdsFromQuery.value.length > 0) {
       const set = new Set(selectedIdsFromQuery.value)
       list = list.filter(i => set.has(i.id))
     }
+    
     items.value = list.map((it, idx) => ({
       key: it.id ?? idx,
       id: it.productId ?? it.id,
@@ -305,12 +313,26 @@ function toVND (n) {
 /* Đặt hàng */
 async function placeOrder () {
   if (!canPlace.value || placing.value) return
-  if (!selectedAddressId.value) {
-    alert('Bạn chưa chọn địa chỉ giao hàng'); 
+  
+  // Debug: In ra giá trị hiện tại
+  console.log('=== DEBUG CHECKOUT ===')
+  console.log('selectedAddressId.value:', selectedAddressId.value)
+  console.log('typeof selectedAddressId.value:', typeof selectedAddressId.value)
+  console.log('addresses:', addresses.value)
+  console.log('items:', items.value)
+  
+  // Validate địa chỉ
+  const addressId = Number(selectedAddressId.value)
+  console.log('addressId after Number():', addressId)
+  console.log('Number.isInteger(addressId):', Number.isInteger(addressId))
+  
+  if (!selectedAddressId.value || !Number.isInteger(addressId) || addressId <= 0) {
+    alert('Vui lòng chọn địa chỉ giao hàng!\n\nDebug:\n- selectedAddressId: ' + selectedAddressId.value + '\n- addressId: ' + addressId)
     return
   }
+  
   if (!items.value.length) {
-    alert('Giỏ hàng trống'); 
+    alert('Giỏ hàng trống!')
     return
   }
 
@@ -331,7 +353,7 @@ async function placeOrder () {
     })
 
     const payload = {
-      addressId: Number(selectedAddressId.value),
+      addressId: addressId,
       note: (note.value || '').trim(),
       paymentMethod: paymentMethod.value || 'COD',
       items: orderItems,
@@ -341,8 +363,9 @@ async function placeOrder () {
       total: Number(total.value) // subtotal - discount + shippingFee
     }
 
-    // xem nhanh payload trước khi gửi
-    // console.log('ORDER PAYLOAD >>>', payload)
+    // Debug: xem payload trước khi gửi
+    console.log('ORDER PAYLOAD >>>', payload)
+    console.log('ORDER PAYLOAD (JSON):', JSON.stringify(payload, null, 2))
 
     const res = await createOrder(payload)
 

@@ -2,12 +2,13 @@
   <aside class="sidebar" aria-label="Thanh điều hướng tài khoản">
     <div class="userbox">
       <div class="avatar">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+        <img v-if="userAvatar" :src="userAvatar" :alt="userName" class="avatar-img" />
+        <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20 21a8 8 0 0 0-16 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <circle cx="12" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
         </svg>
       </div>
-      <div class="uname">{{ username }}</div>
+      <div class="uname">{{ userName }}</div>
     </div>
 
     <!-- Khối: Tài Khoản Của Tôi -->
@@ -61,26 +62,37 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-
-defineProps({
-  username: {
-    type: String,
-    default: 'Người dùng'
-  }
-})
-defineEmits(['edit'])
+import { useAuthStore } from '../../stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
+
+// Lấy thông tin user từ store
+const userName = computed(() => {
+  return authStore.state.user?.name || 
+         authStore.state.user?.fullName || 
+         localStorage.getItem('username') || 
+         'Khách hàng'
+})
+
+const userAvatar = computed(() => {
+  return authStore.state.user?.avatarUrl || 
+         authStore.state.user?.avatar || 
+         null
+})
+
 const isActive = (base) => route.path.startsWith(base)
 </script>
 
 <style scoped>
 .sidebar { background:#fff; border-radius:6px; padding:16px 14px; border:1px solid #e5e7eb; }
 .userbox { display:grid; grid-template-columns:56px 1fr; gap:12px; align-items:center; margin-bottom:12px; }
-.avatar { width:56px; height:56px; border-radius:999px; background:#eef2ff; display:grid; place-items:center; color:#4b5563; border:1px solid #e5e7eb; }
+.avatar { width:56px; height:56px; border-radius:999px; background:#eef2ff; display:grid; place-items:center; color:#4b5563; border:1px solid #e5e7eb; overflow:hidden; }
 .avatar svg { width:30px; height:30px; }
-.uname { font-weight:700; color:#111827; }
+.avatar-img { width:100%; height:100%; object-fit:cover; }
+.uname { font-weight:700; color:#111827; word-break:break-word; }
 
 .snav__title { color:#6b7280; font-weight:600; margin:8px 0; font-size:14px; }
 .snav__list { list-style:none; padding:0; margin:0; }

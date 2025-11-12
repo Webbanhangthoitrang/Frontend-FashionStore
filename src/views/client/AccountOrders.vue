@@ -6,8 +6,8 @@
     <main class="page" role="main">
       <div class="container">
         <div class="grid">
-          <!-- Sidebar (route đã bảo vệ nên không cần check đăng nhập ở đây) -->
-          <AccountSidebar :username="username" />
+          <!-- Sidebar -->
+          <AccountSidebar />
 
           <!-- Đơn Mua -->
           <section class="orders-card" aria-labelledby="orders-title">
@@ -33,21 +33,24 @@
               <p v-else-if="errorMessage" class="state state--error">{{ errorMessage }}</p>
 
               <ul v-else class="olist" role="list">
-                <li v-for="o in orders" :key="o.id || o.orderId" class="oitem">
-                  <!-- Hàng 1 -->
-                  <div class="oitem__row oitem__row--top">
-                    <img :src="o.items?.[0]?.image" alt="" class="thumb" />
-                    <div class="meta">
-                      <h3 class="name">{{ o.items?.[0]?.name }}</h3>
-                      <p class="sub">Phân loại: {{ o.items?.[0]?.variant }}</p>
-                      <p class="sub">x{{ o.items?.[0]?.qty }}</p>
+                <li v-for="o in orders" :key="o.id" class="oitem">
+                  <!-- Danh sách sản phẩm trong đơn hàng -->
+                  <div v-for="(product, idx) in o.products" :key="idx" class="product-row">
+                    <div class="oitem__row oitem__row--top">
+                      <img :src="product.image || '/placeholder.png'" :alt="product.name" class="thumb" />
+                      <div class="meta">
+                        <h3 class="name">{{ product.name }}</h3>
+                        <p class="sub">Phân loại: {{ product.category || 'Không có' }}</p>
+                        <p class="sub">x{{ product.quantity }}</p>
+                      </div>
+                      <div class="price-right">{{ formatVND(product.price * product.quantity) }}</div>
                     </div>
-                    <div class="price-right">{{ formatVND(o.total) }}</div>
+                    <div v-if="idx < o.products.length - 1" class="divider"></div>
                   </div>
 
-                  <div class="divider"></div>
+                  <div class="divider divider--thick"></div>
 
-                  <!-- Hàng 2 -->
+                  <!-- Hàng 2: Trạng thái và tổng tiền -->
                   <div class="oitem__row oitem__row--bot">
                     <div class="status-left">
                       <span class="ship">
@@ -55,21 +58,28 @@
                           <path d="M3 7h13v10H3zM16 10h4l1 2v5h-5z"
                                 fill="none" stroke="currentColor" stroke-width="2"/>
                         </svg>
-                        Giao hàng thành công
+                        {{ getDeliveryStatus(o.status) }}
                       </span>
                       <span class="dot"></span>
-                      <span class="status-text" :class="`st--${o.status}`">
+                      <span class="status-text" :class="`st--${o.status?.toLowerCase()}`">
                         {{ statusText(o.status) }}
                       </span>
                     </div>
 
                     <div class="actions">
                       <button
-                        v-if="o.status === 'completed'"
+                        v-if="o.status === 'COMPLETED'"
                         class="btn-rate"
                         @click="onRate(o)"
                       >
                         Đánh giá
+                      </button>
+                      <button
+                        v-if="['ORDERED', 'PENDING'].includes(o.status)"
+                        class="btn-cancel"
+                        @click="onCancel(o)"
+                      >
+                        Hủy đơn
                       </button>
                     </div>
 
@@ -110,13 +120,20 @@ import AccountSidebar from "../../components/client/AccountSidebar.vue";
    - "/users/me/orders"  hoặc
    - "/orders/customer"
 =============================================================== */
-const ORDERS_ENDPOINT = "/orders/me";
+const ORDERS_ENDPOINT = "/orders/mine";
 
-const username = localStorage.getItem("username") || "Khách hàng";
 const route = useRoute();
 const router = useRouter();
 
-/* Tabs theo thiết kế */
+/* Tabs theo thiết kế - Map lowercase sang UPPERCASE cho backend */
+const STATUS_MAP = {
+  pending: 'PENDING',
+  shipping: 'SHIPPING', 
+  completed: 'COMPLETED',
+  cancelled: 'CANCELLED',
+  returned: 'RETURNED'
+};
+
 const tabs = [
   { key: "all",        label: "Tất cả" },
   { key: "pending",    label: "Chờ xác nhận" },
@@ -144,8 +161,10 @@ async function fetchOrders() {
     loading.value = true;
     errorMessage.value = "";
 
-    // Gửi status theo tab nếu khác "all". BE có thể dùng hoặc bỏ qua.
-    const params = activeTab.value === "all" ? {} : { status: activeTab.value };
+    // ✅ Chuyển status sang UPPERCASE cho backend
+    const params = activeTab.value === "all" 
+      ? {} 
+      : { status: STATUS_MAP[activeTab.value] || activeTab.value.toUpperCase() };
 
     const res = await request(ORDERS_ENDPOINT, { method: "GET", params });
     // Chuẩn hoá: BE có thể trả {data: [...]}, {orders: [...]}, hoặc array
@@ -174,15 +193,26 @@ function goTab(key) {
 }
 
 function statusText(s) {
+  const upperStatus = s?.toUpperCase();
   return (
     {
-      pending: "CHỜ XÁC NHẬN",
-      shipping: "ĐANG VẬN CHUYỂN",
-      completed: "HOÀN THÀNH",
-      cancelled: "ĐÃ HỦY",
-      returned: "TRẢ HÀNG",
-    }[s] || "—"
+      ORDERED: "CHỜ XỬ LÝ",
+      PENDING: "CHỜ XÁC NHẬN",
+      SHIPPING: "ĐANG VẬN CHUYỂN",
+      COMPLETED: "HOÀN THÀNH",
+      CANCELLED: "ĐÃ HỦY",
+      RETURNED: "TRẢ HÀNG",
+    }[upperStatus] || "—"
   );
+}
+
+function getDeliveryStatus(s) {
+  const upperStatus = s?.toUpperCase();
+  if (upperStatus === 'COMPLETED') return 'Giao hàng thành công';
+  if (upperStatus === 'SHIPPING') return 'Đang giao hàng';
+  if (upperStatus === 'CANCELLED') return 'Đã hủy';
+  if (upperStatus === 'RETURNED') return 'Đã trả hàng';
+  return 'Chờ xử lý';
 }
 
 function formatVND(n) {
@@ -195,7 +225,14 @@ function formatVND(n) {
 }
 
 function onRate(o) {
-  router.push({ name: "order-detail", params: { id: o.id || o.orderId }, query: { rate: 1 } });
+  router.push({ name: "order-detail", params: { id: o.id }, query: { rate: 1 } });
+}
+
+function onCancel(o) {
+  if (confirm(`Bạn có chắc muốn hủy đơn hàng #${o.code}?`)) {
+    // TODO: Call API to cancel order
+    console.log('Cancel order:', o.id);
+  }
 }
 </script>
 
@@ -235,6 +272,7 @@ function onRate(o) {
 .sub{margin:0;color:var(--muted);font-size:14px}
 .price-right{margin-left:auto;color:var(--red);font-weight:700;font-size:16px}
 .divider{height:1px;background:#ECECEC}
+.divider--thick{height:2px;background:#E0E0E0}
 
 /* row bottom */
 .oitem__row--bot{gap:12px;background:#fff}
@@ -243,9 +281,12 @@ function onRate(o) {
 .dot{width:1px;height:14px;background:#E0E0E0;display:inline-block}
 .status-text{font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.2px}
 .st--shipping{color:#2563EB}.st--pending{color:#D97706}.st--returned{color:#6B7280}.st--cancelled{color:var(--red)}.st--completed{color:var(--red)}
-.actions{margin-left:16px}
-.btn-rate{height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--red);background:var(--red);color:#fff;font-weight:700;cursor:pointer}
+.actions{margin-left:16px;display:flex;gap:8px}
+.btn-rate,.btn-cancel{height:34px;padding:0 14px;border-radius:8px;font-weight:700;cursor:pointer}
+.btn-rate{border:1px solid var(--red);background:var(--red);color:#fff}
 .btn-rate:hover{filter:brightness(.96)}
+.btn-cancel{border:1px solid var(--muted);background:#fff;color:var(--muted)}
+.btn-cancel:hover{background:#f9fafb}
 .total{margin-left:auto;display:flex;align-items:center;gap:8px}
 .total__label{color:var(--muted)}
 .total__val{color:var(--red);font-size:22px;font-weight:800}

@@ -251,7 +251,7 @@ import ClientFooter from "../../components/client/ClientFooter.vue";
 
 // Services
 import { getProductById } from "../../services/productService";
-import { addItem } from "../../services/cartService";
+import { addItem, fetchCart, cartState } from "../../services/cartService";
 import { useAuthStore } from "../../stores/auth";
 import { getReviewsByProductId } from "../../services/reviewService";
 
@@ -404,7 +404,7 @@ async function performCartAction(redirectToCart = false) {
 
 function addToCart() { performCartAction(false); }
 
-/* >>> MUA NGAY: điều hướng thẳng sang checkout, không thêm giỏ <<< */
+/* >>> MUA NGAY: điều hướng thẳng sang checkout, chỉ hiển thị sản phẩm vừa thêm <<< */
 async function buyNow() {
   if (!isLoggedIn.value) {
     actionStatus.value = { type: "warning", message: "Vui lòng đăng nhập để mua hàng." };
@@ -423,7 +423,21 @@ async function buyNow() {
   actionLoading.value = true;
   try {
     await addItem(variantId, safeQty); // ✅ thêm sản phẩm vào giỏ
-    router.push({ path: "/checkout", query: { source: "buynow" } }); // ✅ điều hướng sang checkout
+    
+    // Lấy giỏ hàng để tìm id của item vừa mới thêm
+    await fetchCart();
+    const lastItem = cartState.items.find(item => 
+      Number(item.productVariantId) === variantId
+    );
+    
+    // Điều hướng sang checkout với id của item vừa thêm
+    router.push({ 
+      path: "/checkout", 
+      query: { 
+        source: "buynow",
+        selected: lastItem?.id || '' // Truyền id của CartItem
+      } 
+    });
   } catch (err) {
     console.error("Lỗi khi mua ngay:", err);
     actionStatus.value = { type: "error", message: err?.message || "Không thể mua ngay." };
