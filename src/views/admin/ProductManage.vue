@@ -9,7 +9,7 @@
         <div class="header-band">
           <div class="page-head">
             <h2 class="page-title">Sản Phẩm</h2>
-            <router-link class="btn btn--primary" :to="{ name: '' }">
+            <router-link class="btn btn--primary" :to="{ name: 'AdminProductCreate' }">
               + Tạo sản phẩm
             </router-link>
           </div>
