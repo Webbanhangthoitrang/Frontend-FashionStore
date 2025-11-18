@@ -143,10 +143,18 @@
     </div>
   </div>
   <CategoryProductPopup
-    v-model:open="showProductPopup"
-    :category="currentCategory"
-    @submit="handleAddProducts"
-  />
+  v-model:open="showProductPopup"
+  :category="currentCategory"
+  @submit="handleAddProducts"
+/>
+
+<CategoryProductRemovePopup
+  v-if="currentCategory"
+  v-model:open="openRemovePopup"
+  :categoryId="currentCategory.id"
+  @delete="removeProducts"
+/>
+
 </template>
 
 <script setup>
@@ -154,6 +162,7 @@ import { ref, computed, onMounted } from "vue";
 
 import AdminSidebar from "../../components/admin/AdminSidebar.vue";
 import CategoryProductPopup from "../../components/admin/CategoryProductPopup.vue";
+import CategoryProductRemovePopup from "../../components/admin/CategoryProductRemovePopup.vue";
 import { request } from "../../services/http";
 
 
@@ -165,7 +174,7 @@ const categories = ref([]);
 /* popup chọn sản phẩm */
 const showProductPopup = ref(false);
 const currentCategory = ref(null);
-
+const openRemovePopup = ref(false);
 /* Lọc theo từ khoá */
 const filteredCategories = computed(() => {
   const q = keyword.value.trim().toLowerCase();
@@ -206,6 +215,35 @@ async function fetchCategories() {
 function handleCreate() {
   console.log("create category");
 }
+async function removeProducts(productIds) {
+  if (!currentCategory.value || !productIds.length) {
+    openRemovePopup.value = false
+    return
+  }
+
+  try {
+    loading.value = true
+    const catId = currentCategory.value.id
+
+    // ĐỔI URL & method cho đúng backend nếu bạn có route khác
+    await request(`/categories/${catId}/products/remove`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productIds }),
+    })
+
+    alert(
+      `Đã xoá ${productIds.length} sản phẩm khỏi danh mục "${currentCategory.value.name}".`
+    )
+    await fetchCategories() // load lại tổng sản phẩm
+  } catch (err) {
+    console.error(err)
+    alert("Xoá sản phẩm khỏi danh mục thất bại.")
+  } finally {
+    loading.value = false
+    openRemovePopup.value = false
+  }
+}
 
 function handleAddProduct(category) {
   // Lưu lại danh mục đang chọn và mở popup
@@ -213,8 +251,11 @@ function handleAddProduct(category) {
   showProductPopup.value = true;
 }
 function handleEdit(category) {
-  console.log("edit category", category);
+  currentCategory.value = category
+  openRemovePopup.value = true
 }
+
+
 /* Nhận danh sách productIds từ popup và gọi API backend
    Swagger: POST /categories/{categoryId}/products  body: { productId } */
 async function handleAddProducts(productIds) {
@@ -234,6 +275,38 @@ async function handleAddProducts(productIds) {
         body: JSON.stringify({ productId }),
       });
     }
+    async function removeProducts(productIds) {
+  if (!currentCategory.value || !productIds.length) {
+    openRemovePopup.value = false
+    return
+  }
+
+  try {
+    loading.value = true
+    const catId = currentCategory.value.id
+
+    // ⚠️ ĐOÁN ENDPOINT: DELETE /categories/{categoryId}/products/{productId}
+    for (const productId of productIds) {
+      await request(`/categories/${catId}/products/${productId}`, {
+        method: "DELETE",
+      })
+    }
+
+    alert(
+      `Đã xoá ${productIds.length} sản phẩm khỏi danh mục "${currentCategory.value.name}".`
+    )
+
+    await fetchCategories() // cập nhật lại tổng sản phẩm
+  } catch (err) {
+    console.error(err)
+    alert("Xoá sản phẩm khỏi danh mục thất bại.")
+  } finally {
+    loading.value = false
+    openRemovePopup.value = false
+  }
+}
+
+
 
     alert(
       `Đã thêm ${productIds.length} sản phẩm vào danh mục "${currentCategory.value.name}".`

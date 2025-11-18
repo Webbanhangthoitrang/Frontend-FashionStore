@@ -1,12 +1,12 @@
-<!-- src/components/admin/CategoryProductPopup.vue -->
+<!-- src/components/admin/CategoryProductRemovePopup.vue -->
 <template>
   <teleport to="body">
     <transition name="fade">
       <div v-if="open" class="overlay" @click.self="handleClose">
         <div class="modal" role="dialog" aria-modal="true">
+
           <!-- HEADER -->
           <header class="modal__header">
-            <!-- nút đóng -->
             <button type="button" class="modal__close" @click="handleClose">
               ✕
             </button>
@@ -14,29 +14,15 @@
 
           <!-- BODY -->
           <div class="modal__body">
-            <!-- Thanh tìm kiếm -->
+
+            <!-- SEARCH -->
             <div class="search">
               <span class="search__icon">
-                <svg
-                  width="25"
-                  height="25"
-                  viewBox="0 0 35 35"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <circle
-                    cx="16.0417"
-                    cy="16.0423"
-                    r="10.2083"
-                    stroke="#9C9C9C"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M29.1667 29.166L24.7917 24.791"
-                    stroke="#9C9C9C"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
+                <svg width="25" height="25" viewBox="0 0 35 35" fill="none">
+                  <circle cx="16.0417" cy="16.0423" r="10.2083"
+                    stroke="#9C9C9C" stroke-width="2" />
+                  <path d="M29.1667 29.166L24.7917 24.791"
+                    stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" />
                 </svg>
               </span>
               <input
@@ -47,20 +33,15 @@
               />
             </div>
 
-            <!-- Danh sách sản phẩm -->
+            <!-- LIST -->
             <div class="list">
               <p v-if="loading" class="state">Đang tải sản phẩm…</p>
-              <p v-else-if="errorMessage" class="state state--error">
-                {{ errorMessage }}
-              </p>
-              <p
-                v-else-if="filteredProducts.length === 0"
-                class="state state--empty"
-              >
-                Không có sản phẩm phù hợp.
+              <p v-else-if="errorMessage" class="state state--error">{{ errorMessage }}</p>
+              <p v-else-if="filteredProducts.length === 0" class="state state--empty">
+                Không có sản phẩm trong danh mục.
               </p>
 
-              <!-- mỗi sản phẩm -->
+              <!-- ROW -->
               <div
                 v-for="item in filteredProducts"
                 v-else
@@ -68,7 +49,8 @@
                 class="row"
               >
                 <div class="row__inner">
-                  <!-- checkbox -->
+
+                  <!-- CHECKBOX -->
                   <label class="row__checkbox">
                     <input
                       type="checkbox"
@@ -78,57 +60,51 @@
                     />
                   </label>
 
-
-                  <!-- ảnh -->
+                  <!-- THUMB -->
                   <div class="row__thumb">
-                    <img :src="item.thumbnail || item.image" :alt="item.name" />
+                    <img :src="item.thumbnail" :alt="item.name" />
                   </div>
 
-                  <!-- tên + trạng thái -->
+                  <!-- NAME -->
                   <div class="row__info">
-                    <p class="row__name">
-                      {{ item.name }}
-                    </p>
-
-                    <span
-                      v-if="item.status === 'inactive' || item.isInactive"
-                      class="badge badge--inactive"
-                    >
-                      Inactive
-                    </span>
+                    <p class="row__name">{{ item.name }}</p>
                   </div>
 
-                  <!-- giá -->
-                  <div class="row__price">
-                    {{ formatPrice(item.price) }}
-                  </div>
+                  <!-- PRICE -->
+                  <div class="row__price">{{ formatPrice(item.price) }}</div>
+
                 </div>
               </div>
             </div>
           </div>
 
           <!-- FOOTER -->
-          <footer class="modal__footer">
-            <div class="footer-inner">
+          <!-- FOOTER -->
+        <footer class="modal__footer">
+        <div class="footer-inner">
+            <!-- Checkbox bên trái nếu muốn giữ UI -->
+            <label class="footer-check">
+            <input type="checkbox" v-model="footerChecked" />
+            </label>
 
-              <!-- Checkbox bên trái -->
-              <label class="footer-check">
-                <input type="checkbox" v-model="footerChecked" />
-              </label>
+            <!-- Nút xoá -->
+                    <button
+                    type="button"
+                    class="btn btn--danger"
+                    :disabled="selectedIds.length === 0 || loading"
+                    @click="openConfirm"
+                    >
+                    Xóa khỏi danh mục
+                    </button>
+                </div>
+                </footer>
 
-              <!-- BUTTON -->
-              <button
-                type="button"
-                class="btn btn--primary"
-                :disabled="selectedIds.length === 0 || loading"
-                @click="handleConfirm"
-              >
-                Thêm vào danh mục
-              </button>
-
-            </div>
-          </footer>
-
+                <!-- POPUP XÁC NHẬN -->
+                <ConfirmRemoveFromCategory
+                v-model:open="confirmOpen"
+                :loading="loading"
+                @confirm="handleConfirmDelete"
+        />
 
         </div>
       </div>
@@ -139,23 +115,47 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { request, API_BASE_URL } from '../../services/http'
+import ConfirmRemoveFromCategory from './ConfirmRemoveFromCategory.vue'  // ✅ Sửa path
 
+/* PROPS & EMITS */
 const props = defineProps({
-  open: { type: Boolean, default: false }, 
-  category: { type: Object, default: null }, 
+  open: { type: Boolean, default: false },
+  categoryId: { type: [Number, String], required: true },
 })
 
-const emit = defineEmits(['update:open', 'close', 'confirm', 'submit'])
+const emit = defineEmits(['update:open', 'close', 'delete'])
 
-
+/* STATE */
 const keyword = ref('')
 const selectedIds = ref([])
-const footerChecked = ref(false) 
+const footerChecked = ref(false)
 
 const products = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
 
+const confirmOpen = ref(false)
+
+/* OPEN CONFIRM POPUP */
+const openConfirm = () => {
+  if (selectedIds.value.length === 0) return
+  confirmOpen.value = true
+}
+
+/* DELETE (emit lên cha) */
+const handleDelete = () => {
+  const ids = [...selectedIds.value]
+  emit('delete', ids)
+  emit('update:open', false) // đóng popup list
+}
+
+/* CONFIRM TRONG POPUP NHỎ */
+const handleConfirmDelete = () => {
+  handleDelete()
+  confirmOpen.value = false   // đóng popup confirm
+}
+
+/* HELPERS */
 const normalizePrice = (p) => {
   if (Array.isArray(p.variants) && p.variants.length) {
     const v0 = p.variants[0]
@@ -187,55 +187,52 @@ const formatPrice = (v) => {
   return Number.isFinite(n) ? n.toLocaleString('vi-VN') : '0'
 }
 
+const buildThumbnail = (p) => {
+  const img =
+    p.thumbnail ||
+    p.image ||
+    (Array.isArray(p.images) && p.images[0]?.url) ||
+    null
 
+  if (!img) return null
+  if (img.startsWith('http')) return img
+  return `${API_BASE_URL || ''}${img}`
+}
+
+/* LOAD PRODUCTS OF CATEGORY */
 const fetchProducts = async () => {
+  if (!props.categoryId) return
+
   loading.value = true
   errorMessage.value = ''
 
   try {
-    const { data } = await request('/products', {
-      params: {
-        page: 1,
-        limit: 100,
-      },
-    })
+    const { data } = await request(`/categories/${props.categoryId}/products`)
 
-    const list = Array.isArray(data) ? data : data.items || data.data || []
+    console.log('CATEGORY PRODUCTS API = ', data)
 
-    products.value = list.map((p) => {
-      const rawThumb =
-        p.thumbnail ||
-        p.image ||
-        p.imageUrl ||
-        (Array.isArray(p.images) && p.images[0]?.url) ||
-        p.img ||
-        p.photo ||
-        null
+    const list = Array.isArray(data)
+      ? data
+      : data.items || data.data || data.products || data.rows || []
 
-      const fullThumb =
-        rawThumb && !/^https?:\/\//.test(rawThumb)
-          ? `${API_BASE_URL || ''}${rawThumb}`
-          : rawThumb
-
-      return {
-        ...p,
-        thumbnail: fullThumb,
-        price: normalizePrice(p),
-      }
-    })
+    products.value = list.map((p) => ({
+      ...p,
+      thumbnail: buildThumbnail(p),
+      price: normalizePrice(p),
+    }))
   } catch (err) {
-    console.error('🔥 Lỗi load products:', err)
+    console.error(err)
     errorMessage.value = err?.message || 'Không tải được danh sách sản phẩm.'
   } finally {
     loading.value = false
   }
 }
 
-/* Khi mở popup thì load lại list */
+/* WATCH OPEN */
 watch(
   () => props.open,
-  (val) => {
-    if (val) {
+  (v) => {
+    if (v) {
       keyword.value = ''
       selectedIds.value = []
       footerChecked.value = false
@@ -244,24 +241,19 @@ watch(
   }
 )
 
-/* Filter theo tên */
+/* FILTER */
 const filteredProducts = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
   if (!kw) return products.value
-  return products.value.filter((p) => (p.name || '').toLowerCase().includes(kw))
+  return products.value.filter((p) =>
+    (p.name || '').toLowerCase().includes(kw)
+  )
 })
 
-
+/* CLOSE */
 const handleClose = () => {
   emit('update:open', false)
   emit('close')
-}
-
-const handleConfirm = () => {
-  const ids = [...selectedIds.value]
-  emit('confirm', ids)
-  emit('submit', ids)
-  emit('update:open', false)
 }
 </script>
 
@@ -522,13 +514,14 @@ const handleConfirm = () => {
 }
 
 /* ===== BUTTON ===== */
-.btn--primary {
-  color: #4c80e6;
-  border: 1px solid #4c80e6;
+
+
+.btn--danger {
+  color: #ff4e6a;
+  border: 1px solid #ff4e6a;
   border-radius: 10px;
   min-width: 180px;
   height: 44px;
   background: #ffffff;
 }
-
 </style>
