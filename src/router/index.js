@@ -1,4 +1,3 @@
-
 import { createRouter, createWebHistory } from 'vue-router'
 
 //  CLIENT 
@@ -202,13 +201,32 @@ const router = createRouter({
 
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('authToken')
-
-  if (to.meta.requiresAuth && !token) {
-    next({ name: 'login', query: { redirect: to.fullPath } })
-  } else {
-    next()
+  const token = localStorage.getItem('authToken');
+  
+  // Lấy thông tin user từ localStorage
+  let user = null;
+  try {
+    const rawUser = localStorage.getItem('authUser');
+    if (rawUser) user = JSON.parse(rawUser);
+  } catch (err) {
+    console.warn('Cannot parse authUser from localStorage');
   }
-})
+
+  // Kiểm tra xem có phải admin không
+  const isAdmin = user?.roleId === 1 || user?.role === 1 || user?.role === 'admin';
+
+  // 1. Kiểm tra authentication
+  if (to.meta.requiresAuth && !token) {
+    return next({ name: 'login', query: { redirect: to.fullPath } });
+  }
+
+  // 2. Kiểm tra admin access
+  if (to.path.startsWith('/admin') && !isAdmin) {
+    // Nếu người dùng không phải admin nhưng cố truy cập trang admin
+    return next({ name: 'home' });
+  }
+
+  next();
+});
 
 export default router

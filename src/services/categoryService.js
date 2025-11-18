@@ -9,11 +9,11 @@ async function getCategories(params) {
 
 // POST /categories  (JSON)
 async function createCategory(payload) {
-  // payload ví dụ: { name: "Váy", icon: "https://..." }
+  // payload ví dụ: { name: "Váy", description: "...", isActive: true }
   const { data } = await request("/categories", {
     method: "POST",
-    body: payload,
-    auth: true, // đổi false nếu API cho phép public
+    data: payload, // Đổi từ 'body' thành 'data'
+    auth: true,
   });
   return data;
 }
@@ -23,7 +23,7 @@ async function createCategoryFormData(formData) {
   // formData.append("name", "Giày dép"); formData.append("icon", file);
   const { data } = await request("/categories", {
     method: "POST",
-    body: formData, // http.js sẽ tự bỏ Content-Type cho multipart
+    data: formData, // Đổi từ 'body' thành 'data'
     auth: true,
   });
   return data;
@@ -33,7 +33,7 @@ async function createCategoryFormData(formData) {
 async function updateCategory(id, payload) {
   const { data } = await request(`/categories/${id}`, {
     method: "PUT",
-    body: payload,
+    data: payload, // Đổi từ 'body' thành 'data'
     auth: true,
   });
   return data;

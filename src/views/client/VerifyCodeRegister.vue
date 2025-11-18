@@ -105,20 +105,27 @@ async function handleVerify() {
   loading.value = true
   try {
     // BE yêu cầu 'otp' (không phải 'code')
-    await verifyRegisterOtp({
+    const response = await verifyRegisterOtp({
       email: email.value,
       otp: code.value,
-      // verificationId: sessionStorage.getItem('signup_verification_id') || undefined,
     })
 
-    // dọn session
+    // Backend trả về token và user sau khi verify thành công
+    if (response?.token && response?.user) {
+      // Import setAuth từ stores
+      const { setAuth } = await import('../../stores/auth')
+      setAuth(response.token, response.user)
+    }
+
+    // Dọn session
     sessionStorage.removeItem('signup_email')
     sessionStorage.removeItem('signup_verification_id')
     sessionStorage.removeItem('signup_payload')
 
-    success.value = 'Xác minh thành công! Bạn có thể đăng nhập.'
+    success.value = 'Đăng ký thành công! Đang chuyển hướng...'
     setTimeout(() => {
-      router.replace({ name: 'login', query: { email: email.value, verified: '1' } })
+      // Chuyển về trang chủ (đã đăng nhập)
+      router.replace({ name: 'home' })
     }, 800)
   } catch (e) {
     error.value = e?.message || 'Mã OTP không đúng hoặc đã hết hạn.'

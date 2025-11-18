@@ -141,20 +141,29 @@
         </div>
       </main>
     </div>
+
+    <!-- POPUPS -->
+    <CategoryProductPopup
+      v-model:open="showProductPopup"
+      :category="currentCategory"
+      @submit="handleAddProducts"
+    />
+
+    <CategoryProductRemovePopup
+      v-if="currentCategory"
+      v-model:open="openRemovePopup"
+      :categoryId="currentCategory.id"
+      @delete="removeProducts"
+    />
+
+    <!-- Popup tạo danh mục mới -->
+    <CreateCategoryPopup
+      :open="showCreatePopup"
+      :categories="categories"
+      @update:open="showCreatePopup = $event"
+      @created="onCategoryCreated"
+    />
   </div>
-  <CategoryProductPopup
-  v-model:open="showProductPopup"
-  :category="currentCategory"
-  @submit="handleAddProducts"
-/>
-
-<CategoryProductRemovePopup
-  v-if="currentCategory"
-  v-model:open="openRemovePopup"
-  :categoryId="currentCategory.id"
-  @delete="removeProducts"
-/>
-
 </template>
 
 <script setup>
@@ -163,6 +172,7 @@ import { ref, computed, onMounted } from "vue";
 import AdminSidebar from "../../components/admin/AdminSidebar.vue";
 import CategoryProductPopup from "../../components/admin/CategoryProductPopup.vue";
 import CategoryProductRemovePopup from "../../components/admin/CategoryProductRemovePopup.vue";
+import CreateCategoryPopup from "../../components/admin/CreateCategoryPopup.vue";
 import { request } from "../../services/http";
 
 
@@ -175,6 +185,8 @@ const categories = ref([]);
 const showProductPopup = ref(false);
 const currentCategory = ref(null);
 const openRemovePopup = ref(false);
+/* popup tạo danh mục */
+const showCreatePopup = ref(false);
 /* Lọc theo từ khoá */
 const filteredCategories = computed(() => {
   const q = keyword.value.trim().toLowerCase();
@@ -213,8 +225,15 @@ async function fetchCategories() {
 
 /* Handler UI (sau này bạn có thể điều hướng / mở popup) */
 function handleCreate() {
-  console.log("create category");
+  showCreatePopup.value = true;
 }
+
+async function onCategoryCreated(newCategory) {
+  console.log('Danh mục mới:', newCategory);
+  // Reload danh sách danh mục
+  await fetchCategories();
+}
+
 async function removeProducts(productIds) {
   if (!currentCategory.value || !productIds.length) {
     openRemovePopup.value = false

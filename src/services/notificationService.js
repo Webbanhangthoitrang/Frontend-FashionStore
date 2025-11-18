@@ -3,19 +3,38 @@ import { request } from "./http";
 
 // Lấy danh sách thông báo của người dùng hiện tại
 export async function getNotifications(params = {}) {
-  // ví dụ hỗ trợ phân trang nếu backend có ?page=&pageSize=
-  return request({
-    url: "/notifications",
+  // params ví dụ: { unreadOnly: true, page: 1, limit: 20 }
+  const { data } = await request("/notifications", {
     method: "GET",
-    params, // { page, pageSize } nếu cần
+    params,
+    auth: true
   });
+  return data;
 }
 
-// (tuỳ backend có hay không) đánh dấu đã đọc tất cả
-export async function markAllNotificationsRead() {
-  // Nếu swagger KHÔNG có endpoint này thì bỏ hàm này đi
-  return request({
-    url: "/notifications/mark-all-read",
+// Đánh dấu 1 thông báo đã đọc
+export async function markNotificationRead(notificationId) {
+  const { data } = await request(`/notifications/${notificationId}/read`, {
     method: "PUT",
+    auth: true
   });
+  return data;
+}
+
+// Đánh dấu tất cả thông báo đã đọc
+export async function markAllNotificationsRead() {
+  const { data } = await request("/notifications/read-all", {
+    method: "PUT",
+    auth: true
+  });
+  return data;
+}
+
+// Xóa thông báo
+export async function deleteNotification(notificationId) {
+  const { data } = await request(`/notifications/${notificationId}`, {
+    method: "DELETE",
+    auth: true
+  });
+  return data;
 }

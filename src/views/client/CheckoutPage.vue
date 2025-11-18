@@ -367,11 +367,11 @@ async function placeOrder () {
     console.log('ORDER PAYLOAD >>>', payload)
     console.log('ORDER PAYLOAD (JSON):', JSON.stringify(payload, null, 2))
 
-    const res = await createOrder(payload)
+    const res = await createOrder(payload);
 
-    const orderId = res?.orderId ?? res?.data?.orderId ?? res?.data?.id ?? res?.id
-    if (orderId) router.push({ path: `/orders/${orderId}` })
-    else router.push({ path: '/orders' })
+    // Sau khi đặt hàng thành công, chuyển đến trang "Đơn mua" của tôi
+    alert('Đặt hàng thành công! 🎉');
+    router.push({ name: 'account.orders' });
   } catch (e) {
     const msg = e?.response?.data?.message || e?.message || 'Đặt hàng thất bại. Vui lòng thử lại!'
     alert(msg)

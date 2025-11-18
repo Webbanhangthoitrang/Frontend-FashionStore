@@ -299,7 +299,7 @@ async function handleRegister() {
     const verificationId = resp?.data?.verificationId || resp?.verificationId
     if (verificationId) sessionStorage.setItem('signup_verification_id', verificationId)
 
-    router.replace({ name: 'VerifyCodeRegister', query: { flow: 'signup' } })
+    router.replace({ name: 'verify-code-register', query: { flow: 'signup' } })
   } catch (err) {
     // Map theo đặc tả; nếu không nhận diện được -> lỗi hệ thống (mục 6)
     const mapped = mapApiErrorToFields(err)

@@ -156,13 +156,23 @@ async function handleLogin() {
       name: trimmedEmail,
       email: trimmedEmail,
       role: response.role,
+      roleId: response.user?.roleId
     };
 
     setAuth(response.token, userPayload);
     if (remember.value) localStorage.setItem("authRemember", "1");
     else localStorage.removeItem("authRemember");
 
-    router.push("/");
+    // Phân biệt admin và user
+    const isAdmin = response.role === 'admin' || userPayload.roleId === 1;
+    
+    if (isAdmin) {
+      // Admin -> chuyển sang trang quản lý đơn hàng
+      router.push('/admin/orders');
+    } else {
+      // User thường -> về trang chủ
+      router.push('/');
+    }
   } catch (error) {
     console.error("Đăng nhập thất bại:", error);
     const is401Error = error?.status === 401;
