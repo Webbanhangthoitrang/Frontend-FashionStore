@@ -68,6 +68,11 @@
       @close="showPopup = false"
       @updated="handleUpdated"
     />
+    <ConfirmDeleteAddress
+  v-model:open="showDeletePopup"
+  :loading="deleteLoading"
+  @confirm="confirmDelete"
+/>
 
     <ClientFooter />
   </div>
@@ -81,7 +86,13 @@ import AccountSidebar from '../../components/client/AccountSidebar.vue'
 import AddressPopup from '../../components/client/AddressPopup.vue'
 import { getMyAddresses, updateAddress, deleteAddress } from '../../services/addressService'
 import { useAuthStore } from '../../stores/auth'
-import { request } from '../../services/http'   // 👈 dùng để tra tên theo code
+import ConfirmDeleteAddress from '../../components/client/ConfirmDeleteAddress.vue'
+import { request } from '../../services/http'  
+
+const showDeletePopup = ref(false)
+const deleteLoading = ref(false)
+const deleteTarget = ref(null)
+
 
 const auth = useAuthStore()
 const username = computed(() => auth?.state?.user?.name || 'Người dùng')
@@ -111,7 +122,19 @@ async function ensureProvinces() {
     // bỏ qua: nếu lỗi sẽ hiển thị theo dữ liệu có sẵn
   }
 }
-
+async function confirmDelete() {
+  deleteLoading.value = true
+  try {
+    await deleteAddress(deleteTarget.value.id)
+    await loadData()
+  } catch (e) {
+    alert(e?.response?.data?.message || e?.message || 'Không xóa được địa chỉ')
+  } finally {
+    deleteLoading.value = false
+    showDeletePopup.value = false
+    deleteTarget.value = null
+  }
+}
 async function getDistrictName(districtCode, provinceCode) {
   const dCode = String(districtCode || '')
   if (!dCode) return ''
@@ -195,16 +218,10 @@ async function loadData() {
 function onAdd() { showPopup.value = true }
 function openEdit() { showPopup.value = true }
 
-async function onDelete(a) {
-  if (!confirm('Bạn có chắc muốn xóa địa chỉ này?')) return
-  try {
-    await deleteAddress(a.id)
-    await loadData()
-  } catch (e) {
-    alert(e?.response?.data?.message || e?.message || 'Không xóa được địa chỉ')
-  }
+function onDelete(a) {
+  deleteTarget.value = a
+  showDeletePopup.value = true
 }
-
 async function onSetDefault(a) {
   if (a.isDefault) return
   try {

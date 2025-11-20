@@ -124,8 +124,7 @@ async function handleVerify() {
 
     success.value = 'Đăng ký thành công! Đang chuyển hướng...'
     setTimeout(() => {
-      // Chuyển về trang chủ (đã đăng nhập)
-      router.replace({ name: 'home' })
+      router.replace({ name: 'login' })
     }, 800)
   } catch (e) {
     error.value = e?.message || 'Mã OTP không đúng hoặc đã hết hạn.'

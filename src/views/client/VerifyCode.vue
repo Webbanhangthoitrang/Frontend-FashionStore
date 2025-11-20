@@ -51,11 +51,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
-  // ✅ đúng tên hàm trong authService.js
-  verifyRegisterOtp,   // POST /auth/verify-register-otp
-  verifyResetOtp,      // POST /auth/verify-reset-code
-  resendRegisterOtp,   // (nếu chưa có endpoint riêng có thể tạm dùng forgot-password)
-  resendResetOtp       // POST /auth/forgot-password
+  verifyRegisterOtp,   
+  verifyResetOtp,      
+  resendRegisterOtp,   
+  resendResetOtp       
 } from '../../services/authService'
 
 const router = useRouter()
