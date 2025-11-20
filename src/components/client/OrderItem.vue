@@ -15,7 +15,10 @@
         <div class="meta">
           <h3 class="name">{{ product.name }}</h3>
 
-          <p class="sub">Phân loại: <span>{{ product.category || "Không có" }}</span></p>
+          <p class="sub">
+            Phân loại:
+            <span>{{ product.category || "Không có" }}</span>
+          </p>
           <p class="sub">x{{ product.quantity }}</p>
         </div>
 
@@ -24,20 +27,26 @@
         </div>
       </div>
 
-      <div v-if="idx < order.products.length - 1" class="divider divider--light" />
+      <div
+        v-if="idx < order.products.length - 1"
+        class="divider divider--light"
+      />
     </div>
 
     <div class="divider divider--thick"></div>
 
     <!-- ================= HÀNG DƯỚI ================= -->
     <div class="oitem__row oitem__row--bot">
-
       <!-- ===== CHỜ XÁC NHẬN ===== -->
       <template v-if="isPending">
         <div class="pending-left">
           <span class="status-link">Chờ xác nhận</span>
 
-          <button class="btn-cancel" @click="$emit('cancel', order)">
+          <!-- CHẶN BUBBLE Ở ĐÂY -->
+          <button
+            class="btn-cancel"
+            @click.stop="$emit('cancel', order)"
+          >
             Hủy đơn hàng
           </button>
         </div>
@@ -65,8 +74,12 @@
         <div class="status-left">
           <span class="ship">
             <svg width="18" height="18" viewBox="0 0 24 24">
-              <path d="M3 7h13v10H3zM16 10h4l1 2v5h-5z"
-                fill="none" stroke="#2F80ED" stroke-width="2" />
+              <path
+                d="M3 7h13v10H3zM16 10h4l1 2v5h-5z"
+                fill="none"
+                stroke="#2F80ED"
+                stroke-width="2"
+              />
             </svg>
             {{ deliveryText(order.status) }}
           </span>
@@ -79,12 +92,22 @@
         </div>
 
         <div class="bot-right">
+          <!-- Đánh giá (chỉ khi hoàn thành & chưa đánh giá) -->
           <button
-            v-if="isCompleted"
+            v-if="canRate"
             class="btn-rate"
-            @click="$emit('rate', order)"
+            @click.stop="$emit('rate', order)"
           >
             Đánh giá
+          </button>
+
+          <!-- Trả hàng (khi đơn đã hoàn thành & chưa ở trạng thái RETURNED) -->
+          <button
+            v-if="canReturn"
+            class="btn-return"
+            @click.stop="$emit('return', order)"
+          >
+            Trả hàng
           </button>
 
           <div class="total">
@@ -93,7 +116,6 @@
           </div>
         </div>
       </template>
-
     </div>
   </li>
 </template>
@@ -102,10 +124,11 @@
 import { computed } from "vue";
 
 const props = defineProps({
-  order: { type: Object, required: true }
+  order: { type: Object, required: true },
 });
 
-defineEmits(["rate", "cancel"]);
+const emit = defineEmits(["rate", "cancel", "return"]);
+
 
 const isPending = computed(() => {
   const u = props.order.status?.toUpperCase();
@@ -120,6 +143,20 @@ const isCompleted = computed(
   () => props.order.status?.toUpperCase() === "COMPLETED"
 );
 
+// nếu backend có flag isRated thì dùng luôn
+const isRated = computed(() => !!props.order.isRated);
+
+// chỉ cho đánh giá khi hoàn thành và chưa đánh giá
+const canRate = computed(() => isCompleted.value && !isRated.value);
+
+// cho phép Trả hàng khi đơn đã hoàn thành và chưa ở trạng thái RETURNED
+const canReturn = computed(() => {
+  const u = props.order.status?.toUpperCase();
+  if (u !== "COMPLETED") return false;
+  if (props.order.isReturned === true) return false;
+  return true;
+});
+
 const statusClass = computed(() => {
   const s = props.order.status?.toLowerCase();
   return `st--${s}`;
@@ -127,14 +164,16 @@ const statusClass = computed(() => {
 
 function statusText(s) {
   const u = s?.toUpperCase();
-  return ({
-    ORDERED: "CHỜ XỬ LÝ",
-    PENDING: "CHỜ XÁC NHẬN",
-    SHIPPING: "ĐANG VẬN CHUYỂN",
-    COMPLETED: "HOÀN THÀNH",
-    CANCELLED: "ĐÃ HỦY",
-    RETURNED: "TRẢ HÀNG"
-  }[u] || "");
+  return (
+    {
+      ORDERED: "CHỜ XỬ LÝ",
+      PENDING: "CHỜ XÁC NHẬN",
+      SHIPPING: "ĐANG VẬN CHUYỂN",
+      COMPLETED: "HOÀN THÀNH",
+      CANCELLED: "ĐÃ HỦY",
+      RETURNED: "TRẢ HÀNG",
+    }[u] || ""
+  );
 }
 
 function deliveryText(s) {
@@ -150,7 +189,7 @@ function formatVND(n) {
   return Number(n).toLocaleString("vi-VN", {
     style: "currency",
     currency: "VND",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   });
 }
 </script>
@@ -269,6 +308,16 @@ function formatVND(n) {
   cursor: pointer;
 }
 
+.btn-return {
+  height: 36px;
+  padding: 0 18px;
+  background: #ffffff;
+  border: 1px solid #ff0000;
+  color: #ff0000;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 /* TRẠNG THÁI – CÁC LOẠI KHÁC */
 .status-left {
   display: flex;
@@ -297,19 +346,15 @@ function formatVND(n) {
   text-transform: uppercase;
 }
 
-/* Màu cho từng trạng thái (CSS thuần) */
 .st--completed {
   color: #ff0000;
 }
-
 .st--shipping {
   color: #2f80ed;
 }
-
 .st--returned {
   color: #777777;
 }
-
 .st--cancelled {
   color: #ff0000;
 }
@@ -332,8 +377,14 @@ function formatVND(n) {
   font-size: 17px;
 }
 
-
 .total--pending {
   margin-left: auto;
+}
+
+/* nhóm nút bên phải */
+.bot-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

@@ -1,54 +1,85 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 
-//  CLIENT 
-import HomeClient from '../views/client/HomeClient.vue'
-import RegisterClient from '../views/client/RegisterClient.vue'
-import LoginClient from '../views/client/LoginClient.vue'
-import CartPage from '../views/client/CartPage.vue'
-import CategoryPage from '../views/client/CategoryPage.vue'
-import CheckoutPage from '../views/client/CheckoutPage.vue'
-import ChangePassword from '../views/client/ChangePassword.vue'
+// ========== CLIENT (lazy load hết) ==========
+const HomeClient         = () => import('../views/client/HomeClient.vue')
+const RegisterClient     = () => import('../views/client/RegisterClient.vue')
+const LoginClient        = () => import('../views/client/LoginClient.vue')
+const CartPage           = () => import('../views/client/CartPage.vue')
+const CategoryPage       = () => import('../views/client/CategoryPage.vue')
+const CheckoutPage       = () => import('../views/client/CheckoutPage.vue')
+const ChangePassword     = () => import('../views/client/ChangePassword.vue')
 
-// ADMIN 
-const AdminUserManage = () => import('../views/admin/UserManage.vue')
-const AdminUserDetail = () => import('../views/admin/UserDetail.vue')
+const Notifications      = () => import('../views/client/Notifications.vue')
+const ForgotPassword     = () => import('../views/client/ForgotPassword.vue')
+const VerifyCode         = () => import('../views/client/VerifyCode.vue')
+const ResetPassword      = () => import('../views/client/ResetPassword.vue')
+const ProductDetail      = () => import('../views/client/ProductDetail.vue')
+const VerifyCodeRegister = () => import('../views/client/VerifyCodeRegister.vue')
 
-const AdminProductManage = () => import('../views/admin/ProductManage.vue')
-const AdminProductCreate = () => import('../views/admin/ProductCreate.vue')
-const AdminProductEdit = () => import('../views/admin/ProductEdit.vue')
+const AccountProfile     = () => import('../views/client/AccountProfile.vue')
+const AccountAddress     = () => import('../views/client/AccountAddress.vue')
+const AccountOrders      = () => import('../views/client/AccountOrders.vue')
+const AccountOrderDetail = () => import('../views/client/AccountOrderDetail.vue')
 
-const AdminCategoryManage = () => import('../views/admin/CategoryManage.vue')
-const AdminOrderManage = () => import('../views/admin/OrderManage.vue')
-const AdminOrderUpdate = () => import('../views/admin/OrderUpdate.vue')
+// ========== ADMIN (lazy load) ==========
+const AdminDashboard         = () => import('../views/admin/Dashboard.vue')
+const AdminUserManage        = () => import('../views/admin/UserManage.vue')
+const AdminUserDetail        = () => import('../views/admin/UserDetail.vue')
 
-// ROUTES 
+const AdminProductManage     = () => import('../views/admin/ProductManage.vue')
+const AdminProductCreate     = () => import('../views/admin/ProductCreate.vue')
+const AdminProductEdit       = () => import('../views/admin/ProductEdit.vue')
+
+const AdminCategoryManage    = () => import('../views/admin/CategoryManage.vue')
+const AdminOrderManage       = () => import('../views/admin/OrderManage.vue')
+const AdminOrderUpdate       = () => import('../views/admin/OrderUpdate.vue')
+const AdminOrderReturnUpdate = () => import('../views/admin/OrderReturnUpdate.vue')
+const AdminReviewManage      = () => import('../views/admin/ReviewManage.vue')
+
+// ========== ROUTES ==========
 const routes = [
-  // CLIENT 
+  // ----- CLIENT -----
+  {
+    path: '/',
+    name: 'home',
+    component: HomeClient,
+  },
 
-  { path: '/', name: 'home', component: HomeClient },
+  {
+    path: '/register',
+    name: 'register',
+    component: RegisterClient,
+  },
 
-  { path: '/register', name: 'register', component: RegisterClient },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginClient,
+  },
 
-  { path: '/login', name: 'login', component: LoginClient },
-
-  { path: '/cart', name: 'cart', component: CartPage },
+  {
+    path: '/cart',
+    name: 'cart',
+    component: CartPage,
+  },
 
   {
     path: '/notifications',
     name: 'notifications',
-    component: () => import('../views/client/Notifications.vue'),
+    component: Notifications,
   },
 
   {
     path: '/forgot-password',
     name: 'forgot-password',
-    component: () => import('../views/client/ForgotPassword.vue'),
+    component: ForgotPassword,
   },
 
   {
     path: '/verify-code',
     name: 'verify-code',
-    component: () => import('../views/client/VerifyCode.vue'),
+    component: VerifyCode,
     props: (route) => ({
       flow: route.query.flow || 'signup',
     }),
@@ -64,7 +95,7 @@ const routes = [
   {
     path: '/reset-password',
     name: 'reset-password',
-    component: () => import('../views/client/ResetPassword.vue'),
+    component: ResetPassword,
     beforeEnter: () => {
       const verified = sessionStorage.getItem('reset_verified') === '1'
       if (!verified) return { name: 'forgot-password' }
@@ -75,8 +106,10 @@ const routes = [
   {
     path: '/product/:id(\\d+)',
     name: 'ProductDetail',
-    component: () => import('../views/client/ProductDetail.vue'),
-    props: (route) => ({ id: Number(route.params.id) }),
+    component: ProductDetail,
+    props: (route) => ({
+      id: Number(route.params.id),
+    }),
   },
 
   {
@@ -92,20 +125,20 @@ const routes = [
   {
     path: '/verify-code-register',
     name: 'verify-code-register',
-    component: () => import('../views/client/VerifyCodeRegister.vue'),
+    component: VerifyCodeRegister,
   },
 
   {
     path: '/account/profile',
     name: 'account.profile',
-    component: () => import('../views/client/AccountProfile.vue'),
+    component: AccountProfile,
     meta: { requiresAuth: true },
   },
 
   {
     path: '/account/address',
     name: 'account.address',
-    component: () => import('../views/client/AccountAddress.vue'),
+    component: AccountAddress,
     meta: { requiresAuth: true },
   },
 
@@ -120,10 +153,20 @@ const routes = [
   {
     path: '/account/orders',
     name: 'account.orders',
-    component: () => import('../views/client/AccountOrders.vue'),
+    component: AccountOrders,
     meta: { requiresAuth: true },
   },
 
+  // Chi tiết đơn hàng khách hàng
+  {
+    path: '/account/orders/:id(\\d+)',
+    name: 'account.orders.detail',
+    component: AccountOrderDetail,
+    props: (route) => ({
+      id: Number(route.params.id),
+    }),
+    meta: { requiresAuth: true },
+  },
 
   {
     path: '/checkout',
@@ -132,44 +175,56 @@ const routes = [
     meta: { requiresAuth: true },
   },
 
-  // ADMIN 
+  // ----- ADMIN -----
 
+  // vào /admin tự redirect sang dashboard
+  {
+    path: '/admin',
+    redirect: '/admin/dashboard',
+  },
+
+  {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: AdminDashboard,
+    meta: { requiresAuth: true, isAdmin: true },
+  },
 
   {
     path: '/admin/users',
     name: 'AdminUserManage',
     component: AdminUserManage,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, isAdmin: true },
   },
 
   {
     path: '/admin/users/:id',
     name: 'AdminUserDetail',
     component: AdminUserDetail,
-    meta: { requiresAuth: true },
     props: true,
+    meta: { requiresAuth: true, isAdmin: true },
   },
 
   {
     path: '/admin/products',
     name: 'AdminProductManage',
     component: AdminProductManage,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, isAdmin: true },
   },
 
   {
     path: '/admin/products/create',
     name: 'AdminProductCreate',
     component: AdminProductCreate,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, isAdmin: true },
   },
 
   {
     path: '/admin/products/:id/edit',
     name: 'AdminProductEdit',
     component: AdminProductEdit,
-    meta: { requiresAuth: true, isAdmin: true },
     props: true,
+    meta: { requiresAuth: true, isAdmin: true },
   },
 
   {
@@ -178,55 +233,72 @@ const routes = [
     component: AdminCategoryManage,
     meta: { requiresAuth: true, isAdmin: true },
   },
-{
-  path: '/admin/orders',
-  name: 'AdminOrderManage',
-  component: AdminOrderManage,
-  meta: { requiresAuth: true },
-},
-{
-  path: '/admin/orders/:id',
-  name: 'admin-order-update',
-  component: AdminOrderUpdate,
-  props: true,
-},
-  
+
+  {
+    path: '/admin/orders',
+    name: 'AdminOrderManage',
+    component: AdminOrderManage,
+    meta: { requiresAuth: true, isAdmin: true },
+  },
+
+  {
+    path: '/admin/orders/return/:id',
+    name: 'AdminOrderReturnUpdate',
+    component: AdminOrderReturnUpdate,
+    props: true,
+    meta: { requiresAuth: true, isAdmin: true },
+  },
+
+  {
+    path: '/admin/orders/:id',
+    name: 'admin-order-update',
+    component: AdminOrderUpdate,
+    props: true,
+    meta: { requiresAuth: true, isAdmin: true },
+  },
+
+  {
+    path: '/admin/reviews',
+    name: 'AdminReviewManage',
+    component: AdminReviewManage,
+    meta: { requiresAuth: true, isAdmin: true },
+  },
 ]
 
-// ====== TẠO ROUTER ======
+// ========== CREATE ROUTER ==========
 const router = createRouter({
   history: createWebHistory(),
   routes,
 })
 
-
+// ========== GLOBAL GUARD ==========
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('authToken');
-  
+  const token = localStorage.getItem('authToken')
+
   // Lấy thông tin user từ localStorage
-  let user = null;
+  let user = null
   try {
-    const rawUser = localStorage.getItem('authUser');
-    if (rawUser) user = JSON.parse(rawUser);
+    const rawUser = localStorage.getItem('authUser')
+    if (rawUser) user = JSON.parse(rawUser)
   } catch (err) {
-    console.warn('Cannot parse authUser from localStorage');
+    console.warn('Cannot parse authUser from localStorage')
   }
 
-  // Kiểm tra xem có phải admin không
-  const isAdmin = user?.roleId === 1 || user?.role === 1 || user?.role === 'admin';
+  // Kiểm tra admin
+  const isAdmin =
+    user?.roleId === 1 || user?.role === 1 || user?.role === 'admin'
 
-  // 1. Kiểm tra authentication
+  // 1. Route cần đăng nhập mà chưa có token
   if (to.meta.requiresAuth && !token) {
-    return next({ name: 'login', query: { redirect: to.fullPath } });
+    return next({ name: 'login', query: { redirect: to.fullPath } })
   }
 
-  // 2. Kiểm tra admin access
+  // 2. Chặn user thường truy cập trang admin
   if (to.path.startsWith('/admin') && !isAdmin) {
-    // Nếu người dùng không phải admin nhưng cố truy cập trang admin
-    return next({ name: 'home' });
+    return next({ name: 'home' })
   }
 
-  next();
-});
+  next()
+})
 
 export default router

@@ -125,12 +125,14 @@ const { setStatus, setError } = useAuthStore()
 
 /* ====== THÔNG ĐIỆP CHUẨN THEO ĐẶC TẢ ====== */
 const MSG = {
-  GENERIC_INPUT: 'Hệ thống hiển thị thông báo lỗi và yêu cầu nhập lại.',
+  GENERIC_INPUT: 'Vui lòng nhập đầy đủ thông tin.',
   USERNAME_TAKEN: 'Tên đăng nhập đã tồn tại, vui lòng chọn tên khác.',
   USERNAME_INVALID: 'Không được chỉ chứa số hoặc ký tự đặc biệt. Vui lòng nhập ít nhất một chữ cái',
+  USERNAME_LENGTH: 'Tên tài khoản phải có 4-30 ký tự',
   EMAIL_TAKEN: 'Email đã được đăng ký, vui lòng dùng Email khác hoặc Đăng nhập.',
+  EMAIL_INVALID: 'Email không hợp lệ', 
   PASSWORD_POLICY: 'Mật khẩu phải có ít nhất 8 ký tự, 1 chữ cái hoa, 1 chữ số và 1 ký tự đặc biệt.',
-  PASSWORD_CONFIRM: 'Xác nhận mật khẩu không khớp.',
+  PASSWORD_CONFIRM: 'Mật khẩu xác nhận không khớp.',
   SYSTEM: 'Có lỗi xảy ra, vui lòng thử lại sau.'
 }
 
@@ -185,28 +187,52 @@ function validateBasic() {
   let valid = true
   let anyFieldInvalid = false
 
-  // Username
-  if (!formData.username.trim() || !LETTER_REGEX.test(formData.username)) {
-    errors.username = !formData.username.trim()
-      ? MSG.GENERIC_INPUT
-      : MSG.USERNAME_INVALID
-    anyFieldInvalid = true
-    valid = false
-  }
+ 
+// Username
+const username = formData.username.trim()
 
-  // Email
-  if (!formData.email.trim() || !EMAIL_REGEX.test(formData.email)) {
-    errors.email = MSG.GENERIC_INPUT
-    anyFieldInvalid = true
-    valid = false
-  }
+if (!username) {
+  errors.username = MSG.GENERIC_INPUT
+  anyFieldInvalid = true
+  valid = false
+}
+else if (!LETTER_REGEX.test(username)) {
+  errors.username = MSG.USERNAME_INVALID
+  anyFieldInvalid = true
+  valid = false
+}
+else if (username.length < 4 || username.length > 30) {
+  errors.username = 'Tên tài khoản phải có 4-30 ký tự'
+  anyFieldInvalid = true
+  valid = false
+}
+
+// Email
+const email = formData.email.trim()
+
+if (!email) {
+  
+  errors.email = MSG.GENERIC_INPUT        
+  anyFieldInvalid = true
+  valid = false
+} else if (!EMAIL_REGEX.test(email)) {
+  
+  errors.email = MSG.EMAIL_INVALID
+  anyFieldInvalid = true
+  valid = false
+}
+
+
 
   // Password
-  if (!formData.password || !PASSWORD_POLICY.test(formData.password)) {
-    errors.password = MSG.PASSWORD_POLICY
-    anyFieldInvalid = true
-    valid = false
-  }
+if (!formData.password || !PASSWORD_POLICY.test(formData.password)) {
+  errors.password = formData.password
+    ? MSG.PASSWORD_POLICY           
+    : MSG.GENERIC_INPUT            
+  anyFieldInvalid = true
+  valid = false
+}
+
 
   // Confirm
   if (!formData.confirmPassword || formData.password !== formData.confirmPassword) {

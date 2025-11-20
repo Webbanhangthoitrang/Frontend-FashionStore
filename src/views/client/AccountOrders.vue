@@ -6,56 +6,57 @@
     <main class="page" role="main">
       <div class="container">
         <div class="grid">
+
           <!-- SIDEBAR -->
           <AccountSidebar />
 
           <!-- ĐƠN MUA -->
           <section class="orders-card" aria-labelledby="orders-title">
-            <!-- THANH TAB TRẠNG THÁI -->
+
+            <!-- TABS -->
             <div class="orders-tabs">
-              <!-- Tiêu đề chỉ để SEO/Accessibility, ẩn trong giao diện -->
               <h2 id="orders-title" class="orders-tabs__title">Đơn Mua</h2>
 
-              <nav
-                class="orders-tabs__nav"
-                role="tablist"
-                aria-label="Trạng thái đơn"
-              >
+              <nav class="orders-tabs__nav" role="tablist">
                 <button
                   v-for="t in tabs"
                   :key="t.key"
                   class="orders-tab"
                   :class="{ 'is-active': activeTab === t.key }"
                   @click="goTab(t.key)"
-                  type="button"
                 >
                   {{ t.label }}
                 </button>
               </nav>
             </div>
 
-            <!-- LIST ĐƠN -->
+            <!-- LIST -->
             <div class="orders-body">
               <p v-if="loading" class="state">Đang tải đơn hàng…</p>
               <p v-else-if="errorMessage" class="state state--error">
                 {{ errorMessage }}
               </p>
 
-              <!-- KHI CÓ ĐƠN HÀNG -->
-              <ul v-else-if="orders.length > 0" class="olist" role="list">
-                <OrderItem
+              <!-- CÓ ĐƠN -->
+              <ul v-else-if="orders.length > 0" class="olist">
+                <li
                   v-for="o in orders"
                   :key="o.id"
-                  :order="o"
-                  @rate="onRate"
-                  @cancel="onCancel"
-                />
+                  class="olist__item"
+                  @click="goDetail(o)"
+                >
+                  <OrderItem
+                    :order="o"
+                    @rate="onRate"
+                    @cancel="onCancel"
+                    @return="onReturn"
+                  />
+                </li>
               </ul>
 
-              <!-- KHI KHÔNG CÓ ĐƠN HÀNG -->
+              <!-- KHÔNG CÓ ĐƠN -->
               <div v-else class="empty-state">
                 <div class="empty-state__icon">
-                  <!-- DÁN NGUYÊN SVG CỦA BẠN Ở ĐÂY -->
                   <svg width="106" height="112" viewBox="0 0 206 212" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                   <rect width="206" height="212" fill="url(#pattern0_2200_1690)"/>
                   <defs>
@@ -67,22 +68,46 @@
                   </svg>
 
                 </div>
-
                 <p class="empty-state__text">Chưa có đơn hàng</p>
               </div>
             </div>
 
+            <!-- POPUP ĐÁNH GIÁ -->
+            <OrderReviewPopup
+              :open="showReview"
+              :order="selectedOrder"
+              :submitting="submittingReview"
+              @close="showReview = false"
+              @submit="handleReviewSubmit"
+            />
+          <ReturnOrderPopup
+          :open="returnOpen"
+          :order-id="returnOrder?.id"
+          :loading="returnLoading"
+          @close="returnOpen = false"
+          @confirm="handleReturnConfirm"
+        />
+
           </section>
+
         </div>
       </div>
     </main>
 
     <ClientFooter />
   </div>
+  <OrderCancelPopup
+  :open="cancelOpen"
+  :order="cancelOrder"
+  :loading="cancelLoading"
+  @close="cancelOpen = false"
+  @confirm="handleCancelConfirm"
+/>
+
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { request } from "../../services/http";
 
@@ -90,12 +115,37 @@ import ClientHeader from "../../components/client/ClientHeaderLogged.vue";
 import ClientFooter from "../../components/client/ClientFooter.vue";
 import AccountSidebar from "../../components/client/AccountSidebar.vue";
 import OrderItem from "../../components/client/OrderItem.vue";
-
-const ORDERS_ENDPOINT = "/orders/mine";
+import OrderReviewPopup from "../../components/client/OrderReviewPopup.vue";
+import OrderCancelPopup from "../../components/client/CancelOrderPopup.vue";
+import ReturnOrderPopup from "../../components/client/OrderReturnPopup.vue";
 
 const route = useRoute();
 const router = useRouter();
 
+const ORDERS_ENDPOINT = "/orders/mine";
+
+/* ===== STATE POPUP HỦY ===== */
+const cancelOpen = ref(false);
+const cancelOrder = ref(null);
+const cancelLoading = ref(false);
+
+/* ===== STATE POPUP TRẢ HÀNG ===== */
+const returnOpen = ref(false);
+const returnOrder = ref(null);
+const returnLoading = ref(false);
+
+/* ===== STATE CHUNG ===== */
+const loading = ref(false);
+const errorMessage = ref("");
+const orders = ref([]);
+
+const activeTab = ref(route.query.tab?.toString() || "all");
+
+const showReview = ref(false);
+const selectedOrder = ref(null);
+const submittingReview = ref(false);
+
+/* ===== MAP TRẠNG THÁI ===== */
 const STATUS_MAP = {
   pending: "PENDING",
   shipping: "SHIPPING",
@@ -113,10 +163,30 @@ const tabs = [
   { key: "returned", label: "Trả hàng" },
 ];
 
-const activeTab = ref(route.query.tab?.toString() || "all");
-const loading = ref(false);
-const errorMessage = ref("");
-const orders = ref([]);
+/* ================== API LẤY ĐƠN ================== */
+async function fetchOrders() {
+  try {
+    loading.value = true;
+    errorMessage.value = "";
+
+    const params =
+      activeTab.value === "all"
+        ? {}
+        : { status: STATUS_MAP[activeTab.value] };
+
+    const res = await request(ORDERS_ENDPOINT, { method: "GET", params });
+
+    const list = res.data?.orders || res.data?.items || res.data || [];
+    orders.value = Array.isArray(list) ? list : [];
+  } catch (err) {
+    errorMessage.value = err.message || "Không thể tải đơn hàng.";
+    orders.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(fetchOrders);
 
 watch(
   () => route.query.tab,
@@ -126,55 +196,130 @@ watch(
   }
 );
 
-async function fetchOrders() {
-  try {
-    loading.value = true;
-    errorMessage.value = "";
-
-    const params =
-      activeTab.value === "all"
-        ? {}
-        : {
-            status:
-              STATUS_MAP[activeTab.value] || activeTab.value.toUpperCase(),
-          };
-
-    const res = await request(ORDERS_ENDPOINT, { method: "GET", params });
-    const list = res.data?.orders || res.data?.items || res.data || [];
-    orders.value = Array.isArray(list) ? list : [];
-  } catch (err) {
-    if (err.status === 403) {
-      errorMessage.value =
-        "Bạn không có quyền truy cập danh sách đơn hàng.";
-    } else if (err.status === 404) {
-      errorMessage.value = "Không tìm thấy endpoint dữ liệu đơn hàng.";
-    } else {
-      errorMessage.value = err.message || "Không thể tải đơn hàng.";
-    }
-    orders.value = [];
-  } finally {
-    loading.value = false;
-  }
-}
-
-onMounted(fetchOrders);
-
-function goTab(key) {
-  router.replace({ query: { tab: key } });
-}
-
-function formatVND(n) {
-  if (n == null) return "0₫";
-  return Number(n).toLocaleString("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
+/* ================== ĐI CHI TIẾT ĐƠN ================== */
+function goDetail(order) {
+  router.push({
+    name: "account.orders.detail",
+    params: { id: order.id },
   });
 }
 
-/* dùng lại formatter cho OrderItem nếu muốn truyền qua provide/inject,
-   còn hiện tại formatter nằm riêng trong OrderItem, ở đây chỉ dùng cho debug nếu cần */
+/* ================== POPUP ĐÁNH GIÁ ================== */
+function onRate(order) {
+  selectedOrder.value = order;
+  showReview.value = true;
+}
+
+async function handleReviewSubmit(payload) {
+  try {
+    submittingReview.value = true;
+
+    const firstProduct = selectedOrder.value?.products?.[0];
+    if (!firstProduct) throw new Error("Không tìm thấy sản phẩm.");
+
+    const productId = firstProduct.productId || firstProduct.id;
+    const url = `/products/${productId}/reviews`;
+
+    const formData = new FormData();
+    formData.append("rating", String(payload.rating));
+    formData.append("comment", payload.comment || "");
+
+if (payload.images && payload.images.length > 0) {
+  formData.append("images", payload.images[0]); 
+}
+
+
+    await request(url, {
+      method: "POST", 
+      data: formData,
+    });
+
+    showReview.value = false;
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Không thể gửi đánh giá.");
+  } finally {
+    submittingReview.value = false;
+  }
+}
+
+
+
+/* ================== POPUP HỦY ================== */
+const openCancelPopup = (order) => {
+  cancelOrder.value = order;
+  cancelOpen.value = true;
+};
+
+function onCancel(order) {
+  openCancelPopup(order);
+}
+
+const handleCancelConfirm = async ({ order, reason }) => {
+  if (!order) return;
+  cancelLoading.value = true;
+
+  try {
+    await request(`/orders/${order.id}/cancel`, {
+      method: "POST",
+      data: { reason },
+    });
+
+    cancelOpen.value = false;
+    await fetchOrders();
+  } catch (err) {
+    alert(err.message || "Không thể hủy đơn hàng.");
+  } finally {
+    cancelLoading.value = false;
+  }
+};
+
+/* ================== POPUP TRẢ HÀNG ================== */
+const openReturnPopup = (order) => {
+  returnOrder.value = order;
+  returnOpen.value = true;
+};
+
+function onReturn(order) {
+  openReturnPopup(order);
+}
+
+/* **CHỈ NHẬN reason + note, KHÔNG NHẬN order** */
+const handleReturnConfirm = async ({ reason, note }) => {
+  const order = returnOrder.value;
+  if (!order) return;
+
+  returnLoading.value = true;
+
+  try {
+    await request(`/orders/${order.id}/return`, {
+      method: "POST",
+      data: {
+        reason,
+        note: note || "",
+      },
+    });
+
+    returnOpen.value = false;
+    await fetchOrders();
+  } catch (err) {
+    alert(err.message || "Không thể gửi yêu cầu trả hàng.");
+  } finally {
+    returnLoading.value = false;
+  }
+};
+
+/* ================== ĐỔI TAB ================== */
+function goTab(key) {
+  activeTab.value = key;
+
+  router.push({
+    path: route.path,
+    query: { tab: key },
+  });
+}
 </script>
+
 
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Khula:wght@400;600;700&display=swap");
@@ -210,7 +355,7 @@ function formatVND(n) {
   border: none;
 }
 
-/* ẨN TITLE "Đơn Mua" – chỉ dùng cho screen reader */
+/* Ẩn TITLE "Đơn Mua" – chỉ dùng cho screen reader */
 .orders-tabs__title {
   position: absolute;
   width: 1px;
@@ -292,29 +437,14 @@ function formatVND(n) {
   gap: 12px;
 }
 
+.olist__item {
+  cursor: pointer;
+}
+.olist__item:hover {
+  filter: brightness(0.98);
+}
+
 /* HÀNG “KHÔNG CÓ ĐƠN” */
-.empty {
-  padding: 24px 32px;
-  color: #777777;
-  font-size: 14px;
-}
-
-/* RESPONSIVE */
-@media (max-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .orders-tabs {
-    padding: 0 16px;
-  }
-  .orders-body {
-    padding-top: 12px;
-  }
-  .olist {
-    padding: 0 12px;
-  }
-}
 .empty-state {
   margin: 0 32px;
   padding: 60px 0;
@@ -337,4 +467,20 @@ function formatVND(n) {
   color: #777777;
 }
 
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-tabs {
+    padding: 0 16px;
+  }
+  .orders-body {
+    padding-top: 12px;
+  }
+  .olist {
+    padding: 0 12px;
+  }
+}
 </style>

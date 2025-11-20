@@ -1,3 +1,4 @@
+<!-- src/views/admin/OrderReturnUpdate.vue -->
 <template>
   <div class="admin-layout">
     <!-- SIDEBAR -->
@@ -8,24 +9,30 @@
       <main class="page">
         <!-- HEADER -->
         <div class="od-header">
-            <h1 class="od-title">Quản lý đơn hàng</h1>
+          <h1 class="od-title">Quản lý đơn hàng</h1>
 
-            <div class="od-subrow" @click="goBack">
-                <span class="od-subrow__icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15 18L9 12L15 6"
-                        stroke="#111827"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"/>
-                </svg>
-                </span>
+          <div class="od-subrow" @click="goBack">
+            <span class="od-subrow__icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="#111827"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
 
-                <span class="od-subtitle">Cập nhật đơn hàng</span>
-            </div>
-            </div>
-
+            <span class="od-subtitle">Cập nhật đơn hàng</span>
+          </div>
+        </div>
 
         <!-- STATE -->
         <p v-if="loading" class="state">Đang tải thông tin đơn hàng…</p>
@@ -56,13 +63,11 @@
                 <span class="info-label">Mã đơn hàng:</span>
                 <span class="info-value">{{ orderCode }}</span>
               </div>
-              
+
               <div class="info-row">
                 <span class="info-label">Ngày đặt hàng:</span>
-                <span class="info-value">
-                    {{ formatDate(order?.createdAt || order?.orderDate) }}
-                </span>
-                </div>
+                <span class="info-value">{{ orderDate }}</span>
+              </div>
 
               <div class="info-row">
                 <span class="info-label">Phương thức thanh toán:</span>
@@ -73,7 +78,7 @@
             </div>
           </div>
 
-          <!-- CỘT PHẢI: SẢN PHẨM + CẬP NHẬT TRẠNG THÁI -->
+          <!-- CỘT PHẢI: SẢN PHẨM + LÝ DO TRẢ HÀNG + HÀNH ĐỘNG -->
           <div class="od-right">
             <!-- Danh sách sản phẩm -->
             <div class="card product-card">
@@ -111,38 +116,51 @@
               </table>
             </div>
 
-            <!-- Cập nhật trạng thái -->
-            <div class="card status-card">
-              <h2 class="card-title">Cập nhật trạng thái</h2>
-
-              <div class="status-list">
-                <label class="status-item">
+            <!-- Lý do trả hàng + Hành động (y chang Figma) -->
+            <div class="card return-card">
+              <div class="return-grid">
+                <!-- Lý do trả hàng -->
+                <div class="return-left">
+                  <h2 class="card-title">Lý do trả hàng</h2>
                   <input
-                    v-model="selectedStatus"
-                    type="radio"
-                    value="ORDERED"
+                    v-model="returnReason"
+                    type="text"
+                    class="reason-input"
+                    placeholder="Giao nhầm size"
                   />
-                  <span>Chờ xác nhận</span>
-                </label>
+                </div>
 
+                <!-- Hành động -->
+                <div class="return-right">
+                  <h2 class="card-title">Hành động</h2>
 
-                <label class="status-item">
-                  <input
-                    v-model="selectedStatus"
-                    type="radio"
-                    value="SHIPPING"
-                  />
-                  <span>Vận chuyển</span>
-                </label>
+                  <div class="action-list">
+                    <label class="action-item">
+                      <input
+                        v-model="decision"
+                        type="radio"
+                        value="APPROVE"
+                      />
+                      <span>Chấp nhận</span>
+                    </label>
 
-                <label class="status-item">
-                  <input
-                    v-model="selectedStatus"
-                    type="radio"
-                    value="COMPLETED"
-                  />
-                  <span>Hoàn thành</span>
-                </label>
+                    <label class="action-item">
+                      <input
+                        v-model="decision"
+                        type="radio"
+                        value="REJECT"
+                      />
+                      <span>Từ chối</span>
+                    </label>
+                  </div>
+
+                  <textarea
+                    v-model="rejectReason"
+                    class="reject-input"
+                    :disabled="decision !== 'REJECT'"
+                    placeholder="Lý do từ chối…"
+                  ></textarea>
+                </div>
               </div>
 
               <!-- BUTTONS -->
@@ -185,8 +203,10 @@ const saving = ref(false)
 const errorMessage = ref('')
 const order = ref(null)
 
-// trạng thái đang chọn
-const selectedStatus = ref('ORDERED')
+// form trả hàng
+const returnReason = ref('')
+const decision = ref('APPROVE') // APPROYVE | REJECT
+const rejectReason = ref('')
 
 // ========== LẤY ĐƠN HÀNG ==========
 const fetchOrder = async () => {
@@ -194,19 +214,17 @@ const fetchOrder = async () => {
   errorMessage.value = ''
   try {
     const res = await request(`/orders/${orderId}`, { method: 'GET' })
-
-    // BE trả: { success, message, data: { id, customer, order, products, ... } }
+    // BE: { success, message, data: { id, customer, order, products, ... } }
     const payload = res.data?.data || res.data
-    console.log('DETAIL ORDER = ', payload)
+    console.log('RETURN ORDER DETAIL = ', payload)
 
     order.value = payload
 
-    selectedStatus.value = String(
-      payload.order?.status ||
-        payload._fullData?.status ||
-        payload.status ||
-        'ORDERED'
-    ).toUpperCase()
+    // nếu BE có sẵn lý do trả hàng / trạng thái thì set vào:
+    returnReason.value =
+      payload.returnReason || payload.order?.returnReason || ''
+
+    // TODO: nếu BE có field quyết định cũ thì map vào decision ở đây
   } catch (err) {
     console.error(err)
     errorMessage.value =
@@ -218,19 +236,17 @@ const fetchOrder = async () => {
 
 // ========== THÔNG TIN HIỂN THỊ ==========
 
-// Mã đơn hàng
 const orderCode = computed(() => {
   const o = order.value || {}
-  return (
-    o.order?.code ||
-    o._fullData?.code ||
-    o.code ||
-    o.id ||
-    ''
-  )
+  return o.order?.code || o._fullData?.code || o.code || o.id || ''
 })
 
-// Tên khách hàng
+const orderDate = computed(() => {
+  const o = order.value || {}
+  const raw = o.order?.createdAt || o._fullData?.createdAt
+  return formatDate(raw)
+})
+
 const customerName = computed(() => {
   const o = order.value || {}
   const c = o.customer || {}
@@ -246,34 +262,22 @@ const customerName = computed(() => {
   )
 })
 
-// Email khách hàng
 const customerEmail = computed(() => {
   const o = order.value || {}
   const c = o.customer || {}
   const user = o._fullData?.user || {}
 
-  return (
-    c.email ||
-    user.email ||
-    '—'
-  )
+  return c.email || user.email || '—'
 })
 
-// SĐT khách hàng
 const customerPhone = computed(() => {
   const o = order.value || {}
   const c = o.customer || {}
   const addr = o._fullData?.address || {}
 
-  return (
-    c.phone ||
-    addr.phone ||
-    o._fullData?.receiverPhone ||
-    '—'
-  )
+  return c.phone || addr.phone || o._fullData?.receiverPhone || '—'
 })
 
-// Địa chỉ khách hàng
 const customerAddress = computed(() => {
   const o = order.value || {}
   const c = o.customer || {}
@@ -287,26 +291,19 @@ const customerAddress = computed(() => {
   )
 })
 
-// Danh sách sản phẩm
+// danh sách sản phẩm
 const items = computed(() => {
   const o = order.value || {}
-
-  // dạng rút gọn BE đã chuẩn bị
   if (Array.isArray(o.products)) return o.products
-
-  // fallback: lấy từ _fullData.orderItems
   if (Array.isArray(o._fullData?.orderItems)) return o._fullData.orderItems
-
   return []
 })
 
 const itemName = (item) => {
   if (!item) return 'Sản phẩm'
 
-  // dạng products: { name, variant, ... }
   if (item.name && item.variant) return `${item.name} (${item.variant})`
 
-  // dạng orderItems: { productVariant: { product: { name } } }
   if (item.productVariant?.product?.name) {
     const base = item.productVariant.product.name
     const color = item.productVariant.color || item.productVariant?.color
@@ -321,12 +318,10 @@ const itemName = (item) => {
 // Tổng tiền
 const totalPrice = computed(() => {
   const o = order.value || {}
-
   if (o.order?.total) return Number(o.order.total)
   if (o.total) return Number(o.total)
   if (o.subtotal) return Number(o.subtotal)
 
-  // fallback: cộng từ items
   return items.value.reduce((sum, it) => {
     const q = it.quantity || 1
     const p = Number(it.price || 0)
@@ -366,21 +361,28 @@ const formatCurrency = (value) => {
   return num.toLocaleString('vi-VN') + '₫'
 }
 
-// ========== LƯU TRẠNG THÁI ==========
+// ========== LƯU TRẠNG THÁI TRẢ HÀNG ==========
 const handleSave = async () => {
   if (!order.value) return
 
   try {
     saving.value = true
-    await request(`/orders/${orderId}/status`, {
+
+    // TODO: Chỉnh endpoint & body cho đúng backend của bạn
+    await request(`/orders/${orderId}/return`, {
       method: 'PUT',
-      data: { status: selectedStatus.value },
+      data: {
+        action: decision.value, // APPPROVE | REJECT
+        returnReason: returnReason.value,
+        rejectReason: decision.value === 'REJECT' ? rejectReason.value : '',
+      },
     })
-    window.alert('Cập nhật trạng thái thành công.')
+
+    window.alert('Cập nhật trạng thái trả hàng thành công.')
     router.back()
   } catch (err) {
     console.error(err)
-    window.alert('Cập nhật trạng thái thất bại.')
+    window.alert('Cập nhật trạng thái trả hàng thất bại.')
   } finally {
     saving.value = false
   }
@@ -398,8 +400,9 @@ onMounted(fetchOrder)
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", sans-serif;
+  background: #f5f5f7;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', sans-serif;
 }
 
 .admin-content {
@@ -417,7 +420,6 @@ onMounted(fetchOrder)
   margin-bottom: 8px;
 }
 
-/* Tiêu đề "Quản lý đơn hàng" */
 .od-title {
   font-size: 26px;
   font-weight: 700;
@@ -425,7 +427,6 @@ onMounted(fetchOrder)
   margin: 0;
 }
 
-/* Hàng chứa icon back + chữ "Cập nhật đơn hàng" */
 .od-subrow {
   margin-top: 20px;
   display: inline-flex;
@@ -440,12 +441,8 @@ onMounted(fetchOrder)
   justify-content: center;
   width: 18px;
   height: 18px;
-
 }
 
-
-
-/* Text "Cập nhật đơn hàng" */
 .od-subtitle {
   font-size: 14px;
   font-weight: 600;
@@ -465,6 +462,7 @@ onMounted(fetchOrder)
 /* PANEL CHÍNH (khung trắng giữa nền xám) */
 .od-panel {
   margin-top: 12px;
+  background: #f7f7f7;
   border-radius: 20px;
   padding: 32px;
   display: grid;
@@ -518,10 +516,6 @@ onMounted(fetchOrder)
   color: #111827;
 }
 
-.info-value--price {
-  font-weight: 600;
-}
-
 /* PRODUCT CARD */
 .prod-table {
   width: 100%;
@@ -567,47 +561,75 @@ onMounted(fetchOrder)
   color: #6b7280;
 }
 
-/* STATUS CARD */
-/* === RADIO CUSTOM MÀU #6bca79 === */
-
-/* === RADIO FULL MÀU #6bca79 === */
-
-.status-item input[type='radio'] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #999999;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+/* RETURN CARD */
+.return-card {
+  margin-top: 16px;
 }
 
-/* Khi được chọn → FULL MÀU */
-.status-item input[type='radio']:checked {
-  background-color: #6bca79;
-  border-color: #6bca79;
+.return-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px;
 }
 
+/* INPUT LÝ DO TRẢ HÀNG */
+.reason-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+}
 
-.status-list {
-  margin-top: 8px;
+/* ACTION – RADIO TO MÀU #6BCA79 */
+.action-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 12px;
 }
 
-.status-item {
-  display: flex;
+.action-item {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   color: #111827;
+  cursor: pointer;
 }
 
-.status-item input[type='radio'] {
-  width: 16px;
-  height: 16px;
+/* radio lớn 27px, viền 2px, full màu khi checked */
+.action-item input[type='radio'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  border: 2px solid #6bca79;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.action-item input[type='radio']:checked {
+  background-color: #6bca79;
+  border-color: #6bca79;
+}
+
+/* textarea lý do từ chối */
+.reject-input {
+  width: 100%;
+  min-height: 70px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.reject-input:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
 }
 
 /* BUTTONS */
