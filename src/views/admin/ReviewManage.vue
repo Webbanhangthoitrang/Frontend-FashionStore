@@ -235,6 +235,12 @@
           </div>
         </section>
       </main>
+      <BulkReplyPopup
+  :open="bulkOpen"
+  @close="bulkOpen = false"
+  @submit="submitBulk"
+/>
+
     </div>
 
     <!-- POPUP PHẢN HỒI ĐÁNH GIÁ -->
@@ -310,7 +316,15 @@
 
               <!-- PHẢN HỒI -->
               <div class="rv-modal-reply">
-                <p class="rv-modal-reply-label">Phản hồi đánh giá</p>
+                <button
+                type="button"
+                class="rv-modal-reply-label"
+                :disabled="!selectedIds.length"
+                @click="bulkOpen = true"
+              >
+                Phản hồi đánh giá
+              </button>
+
                 <textarea
                   v-model="replyContent"
                   class="rv-modal-textarea"
@@ -350,6 +364,26 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import AdminSidebar from '../../components/admin/AdminSidebar.vue'
 import DashboardCalendar from '../../components/admin/DashboardCalendar.vue'
 import { request } from '../../services/http'
+import BulkReplyPopup from '../../components/admin/BulkReplyPopup.vue'
+const bulkOpen = ref(false)
+const submitBulk = async () => {
+  try {
+    await request('/reviews/bulk-reply', {
+      method: 'POST',
+      data: {
+        ids: selectedIds.value,
+        reply: "Cảm ơn bạn đã ủng hộ FashionStore! Shop sẽ tiếp thu ý kiến..."
+      }
+    })
+
+    alert("Gửi phản hồi hàng loạt thành công!")
+    bulkOpen.value = false
+    fetchReviews()
+
+  } catch (err) {
+    alert(err?.response?.data?.message || "Gửi phản hồi thất bại")
+  }
+}
 
 /* ===== STATE ===== */
 const reviews = ref([])

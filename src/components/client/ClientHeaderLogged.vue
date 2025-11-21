@@ -78,10 +78,12 @@
 
           <!-- Popup thông báo -->
           <NotificationPopup 
-            v-if="showNoti"
-            :items="notifications"
-            @close="showNoti = false"
-          />
+          v-if="showNoti"
+          :items="notifications"
+          @close="showNoti = false"
+          @markAllRead="handleMarkAllRead"   
+        />
+
 
           <!-- Tên người dùng -->
           <router-link 
@@ -256,6 +258,17 @@ function logout() {
   clearAuth()
   router.push({ path: '/login' })
 }
+function handleMarkAllRead() {
+  
+  rawNoti.value = (rawNoti.value || []).map(n => ({
+    ...n,
+    read: true,
+    isRead: true,  
+  }))
+
+  
+}
+
 </script>
 
 <style scoped>

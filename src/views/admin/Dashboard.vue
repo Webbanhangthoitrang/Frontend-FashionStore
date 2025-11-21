@@ -1,43 +1,23 @@
-<!-- src/views/admin/Dashboard.vue -->
 <template>
   <div class="admin-layout">
-    <!-- SIDEBAR -->
     <AdminSidebar />
 
-    <!-- CONTENT -->
     <div class="admin-content">
       <main class="page">
-        <!-- HEADER: TIÊU ĐỀ + FILTER DROPDOWN -->
+
+        <!-- HEADER -->
         <div class="dash-header">
           <h1 class="dash-title">Hiệu suất nền tảng</h1>
 
-          <!-- FILTER DROPDOWN -->
           <div class="filter-wrapper" @click.stop>
-            <button
-              class="filter-trigger"
-              type="button"
-              @click="toggleFilter"
-            >
-              <!-- ICON BÊN TRÁI -->
-              <svg
-                class="chevron"
-                width="16"
-                height="16"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M5 7.5L10 12.5L15 7.5"
-                  stroke="#111827"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+            <button class="filter-trigger" @click="toggleFilter">
+              <svg class="chevron" width="16" height="16" viewBox="0 0 20 20">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="#111827"
+                  stroke-width="1.6" stroke-linecap="round" />
               </svg>
               <span>{{ activeLabel }}</span>
             </button>
 
-            <!-- COMPONENT LỊCH RIÊNG -->
             <DashboardCalendar
               v-if="openFilter"
               v-model="period"
@@ -48,9 +28,10 @@
           </div>
         </div>
 
-        <!-- KHUNG XÁM CHÍNH -->
+        <!-- PANEL -->
         <section class="dash-panel">
-          <!-- HÀNG 1: 3 Ô THỐNG KÊ -->
+
+          <!-- 3 Ô THỐNG KÊ -->
           <section class="stats-row">
             <div class="stat-box">
               <p class="stat-label">Tổng doanh thu</p>
@@ -68,28 +49,41 @@
             </div>
           </section>
 
-          <!-- HÀNG 2: BIỂU ĐỒ -->
+          <!-- BIỂU ĐỒ -->
           <section class="card chart-card">
             <p class="card-title">Doanh thu theo thời gian</p>
             <canvas ref="revChart" height="120"></canvas>
           </section>
 
-          <!-- HÀNG 3: SẢN PHẨM BÁN CHẠY -->
+          <!-- TOP SẢN PHẨM -->
           <section class="card best-sell-card">
-            <p class="card-title">Sản phẩm bán chạy</p>
+            <p class="card-title">Sản phẩm hàng đầu</p>
 
             <div class="best-list">
               <div
                 v-for="(item, i) in bestSelling"
                 :key="i"
                 class="best-row"
+                :title="`Tên: ${item.name}\nĐã bán: ${item.quantity}`"
               >
-                <p class="best-name" :title="item.name">{{ item.name }}</p>
+                <p class="best-name">{{ item.name }}</p>
+
                 <div class="bar-wrap">
                   <div class="bar" :style="{ width: item.percent + '%' }"></div>
                 </div>
+
                 <span class="qty">{{ item.quantity }}</span>
               </div>
+            </div>
+
+            <!-- TRỤC SỐ -->
+            <div class="best-axis">
+              <span>0</span>
+              <span>100</span>
+              <span>200</span>
+              <span>300</span>
+              <span>400</span>
+              <span>500</span>
             </div>
           </section>
         </section>
@@ -97,169 +91,159 @@
     </div>
   </div>
 </template>
-
 <script setup>
-import {
-  ref,
-  computed,
-  onMounted,
-  nextTick,
-  onBeforeUnmount,
-} from 'vue'
-import AdminSidebar from '../../components/admin/AdminSidebar.vue'
-import DashboardCalendar from '../../components/admin/DashboardCalendar.vue'
-import { request } from '../../services/http'
-import Chart from 'chart.js/auto'
+import { ref, computed, onMounted, nextTick, onBeforeUnmount } from "vue";
+import AdminSidebar from "../../components/admin/AdminSidebar.vue";
+import DashboardCalendar from "../../components/admin/DashboardCalendar.vue";
+import { request } from "../../services/http";
+import Chart from "chart.js/auto";
 
-// ===== STATE CHÍNH =====
 const overview = ref({
   revenue: 0,
   profit: 0,
   totalOrders: 0,
-})
+});
 
-const bestSelling = ref([])
-const revenueData = ref([])
-const period = ref('today')
+const bestSelling = ref([]);
+const revenueData = ref([]);
+const period = ref("today");
 
-// ===== FILTER OPTIONS =====
 const filterOptions = [
-  { label: 'Hôm nay', value: 'today' },
-  { label: 'Tuần này', value: 'week' },
-  { label: 'Tháng này', value: 'month' },
-  { label: 'Năm nay', value: 'year' },
-  { label: 'Tất cả', value: 'all' },
-]
+  { label: "Hôm nay", value: "today" },
+  { label: "Tuần này", value: "week" },
+  { label: "Tháng này", value: "month" },
+  { label: "Năm nay", value: "year" },
+  { label: "Tất cả", value: "all" },
+];
 
-const activeLabel = computed(
-  () => filterOptions.find((o) => o.value === period.value)?.label || 'Hôm nay',
-)
+const activeLabel = computed(() =>
+  filterOptions.find((o) => o.value === period.value)?.label || "Hôm nay"
+);
 
 const formatMoney = (n) =>
-  n ? n.toLocaleString('vi-VN') + ' VND' : '0 VND'
+  n ? n.toLocaleString("vi-VN") + " VND" : "0 VND";
 
-// ===== GỌI API =====
+// ==== API ====
+
 const loadOverview = async () => {
-  try {
-    const res = await request('/dashboard/overview', { method: 'GET' })
-    overview.value = res.data || res
-  } catch (err) {
-    console.error('loadOverview error:', err)
-  }
-}
+  const res = await request("/dashboard/overview");
+  overview.value = res.data;
+};
 
 const loadRevenue = async () => {
-  try {
-    const res = await request(`/dashboard/revenue?period=${period.value}`, {
-      method: 'GET',
-    })
-    revenueData.value = res.data || res
-    await renderChart()
-  } catch (err) {
-    console.error('loadRevenue error:', err)
-  }
-}
+  const res = await request(`/dashboard/revenue?period=${period.value}`);
+  revenueData.value = res.data;
+  await renderChart();
+};
 
 const loadBestSelling = async () => {
-  try {
-    const res = await request('/dashboard/best-selling', { method: 'GET' })
-    const list = res.data || res
+  const res = await request("/dashboard/best-selling");
 
-    const maxQty = Math.max(...list.map((i) => i.quantity || 0), 1)
-    bestSelling.value = list.map((i) => ({
-      ...i,
-      percent: Math.round(((i.quantity || 0) / maxQty) * 100),
-    }))
-  } catch (err) {
-    console.error('loadBestSelling error:', err)
-  }
-}
+  let list = res.data || [];
 
-// ===== CHART.JS =====
-const revChart = ref(null)
-let chartInstance = null
+  // Sort giảm dần + lấy top 5
+  list = list
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5);
+
+  const maxQty = Math.max(...list.map((i) => i.quantity), 1);
+
+  bestSelling.value = list.map((i) => ({
+    ...i,
+    percent: Math.round((i.quantity / maxQty) * 100),
+  }));
+};
+
+// ==== CHART ====
+
+const revChart = ref(null);
+let chartInstance = null;
 
 const renderChart = async () => {
-  await nextTick()
-  if (!revChart.value) return
+  await nextTick();
 
-  const ctx = revChart.value.getContext('2d')
-  if (chartInstance) chartInstance.destroy()
+  if (!revChart.value) return;
+
+  const ctx = revChart.value.getContext("2d");
+  if (chartInstance) chartInstance.destroy();
 
   chartInstance = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
       labels: revenueData.value.map((x) => x.label),
       datasets: [
         {
           data: revenueData.value.map((x) => x.value),
-          borderColor: '#FF9900',
-          backgroundColor: 'transparent',
+          borderColor: "#FF9900",
+          backgroundColor: "transparent",
           tension: 0.4,
         },
       ],
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
-      layout: { padding: { top: 12, bottom: 8, left: 8, right: 16 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title(items) {
+              const label = items[0]?.label || "";
+              return `Ngày ${label}`;
+            },
+            label(context) {
+              const val = context.parsed.y || 0;
+              return `Doanh thu (VND): ${val.toLocaleString("vi-VN")}`;
+            },
+          },
+        },
+      },
       scales: {
         y: {
           beginAtZero: true,
-          grid: { color: 'rgba(148, 163, 184, 0.25)' },
+          grid: { color: "rgba(148, 163, 184, 0.25)" },
         },
         x: {
           grid: { display: false },
         },
       },
     },
-  })
-}
+  });
+};
 
-// ===== DROPDOWN FILTER =====
-const openFilter = ref(false)
+// ==== DROPDOWN ====
 
-const toggleFilter = () => {
-  openFilter.value = !openFilter.value
-}
+const openFilter = ref(false);
+const toggleFilter = () => (openFilter.value = !openFilter.value);
+const handleCancel = () => (openFilter.value = false);
 
-// user bấm Hủy
-const handleCancel = () => {
-  openFilter.value = false
-}
-
-// user bấm Áp dụng
 const handleApply = async () => {
-  openFilter.value = false
-  await Promise.all([loadOverview(), loadRevenue()])
-}
+  openFilter.value = false;
+  await Promise.all([loadOverview(), loadRevenue()]);
+};
 
-// click ngoài để đóng dropdown
+// Click outside
 const handleClickOutside = (e) => {
-  if (!(e.target.closest && e.target.closest('.filter-wrapper'))) {
-    openFilter.value = false
+  if (!e.target.closest(".filter-wrapper")) {
+    openFilter.value = false;
   }
-}
+};
 
-// ===== LIFECYCLE =====
+// ==== LIFECYCLE ====
 onMounted(async () => {
-  window.addEventListener('click', handleClickOutside)
-  await Promise.all([loadOverview(), loadRevenue(), loadBestSelling()])
-})
+  window.addEventListener("click", handleClickOutside);
+  await Promise.all([loadOverview(), loadRevenue(), loadBestSelling()]);
+});
 
 onBeforeUnmount(() => {
-  window.removeEventListener('click', handleClickOutside)
-})
+  window.removeEventListener("click", handleClickOutside);
+});
 </script>
-
 <style scoped>
-/* ===== LAYOUT CHUNG ===== */
+/* ===== LAYOUT CHUNG ADMIN ===== */
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  background: #f5f5f7;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
-    'Segoe UI', sans-serif;
+  background: #f3f4f6;
 }
 
 .admin-content {
@@ -268,11 +252,14 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 
+/* Trang dashboard chiếm full width, không giới hạn max-width */
 .page {
-  padding: 24px 32px 32px;
+  width: 100%;
+  max-width: none;
+  padding: 24px 40px 32px;
 }
 
-/* ===== HEADER TRÊN CÙNG ===== */
+/* ===== HEADER: TIÊU ĐỀ + FILTER ===== */
 .dash-header {
   display: flex;
   flex-direction: column;
@@ -287,13 +274,12 @@ onBeforeUnmount(() => {
   color: #111827;
 }
 
-/* ===== FILTER DROPDOWN TRIGGER ===== */
 .filter-wrapper {
   position: relative;
 }
 
 .filter-trigger {
-  min-width: 120px;
+  min-width: 130px;
   padding: 8px 16px;
   border-radius: 999px;
   border: 1px solid #e5e7eb;
@@ -302,18 +288,19 @@ onBeforeUnmount(() => {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px; /* khoảng cách icon - chữ */
+  gap: 8px;
 }
 
 .filter-trigger .chevron {
   flex-shrink: 0;
 }
 
-/* ===== KHUNG XÁM CHÍNH ===== */
+/* ===== KHUNG PANEL CHÍNH ===== */
 .dash-panel {
-  margin-top: 8px;
-  background: #f7f7f7;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto; /* canh giữa như Figma */
+  background: #ffffff;
   border-radius: 20px;
   padding: 24px;
   display: flex;
@@ -322,15 +309,16 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
-/* ===== STAT BOXES ===== */
+/* ===== 3 Ô THỐNG KÊ ===== */
 .stats-row {
   display: flex;
+  justify-content: space-between;
   gap: 16px;
 }
 
 .stat-box {
   flex: 1;
-  padding: 16px;
+  padding: 16px 18px;
   background: #ffffff;
   border-radius: 16px;
   border: 1px solid #e5e7eb;
@@ -345,24 +333,39 @@ onBeforeUnmount(() => {
   font-size: 22px;
   margin-top: 6px;
   font-weight: 600;
+  color: #111827;
 }
 
-/* ===== CARD CHUNG ===== */
+/* ===== CARD CHUNG (BIỂU ĐỒ + TOP SẢN PHẨM) ===== */
 .card {
+  width: 100%;
   background: #ffffff;
   border-radius: 16px;
   border: 1px solid #e5e7eb;
-  padding: 16px 20px;
+  padding: 20px 22px;
 }
 
 .card-title {
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  color: #111827;
 }
 
-/* ===== BEST SELLING ===== */
+/* Biểu đồ doanh thu full width */
+.chart-card {
+  width: 100%;
+}
+
+/* ===== TOP SẢN PHẨM HÀNG ĐẦU ===== */
+.best-sell-card {
+  width: 100%;
+}
+
 .best-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   padding-right: 4px;
 }
 
@@ -370,28 +373,29 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
 }
 
 .best-name {
   width: 220px;
   font-size: 13px;
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .bar-wrap {
-  background: #f4f4fb;
-  height: 10px;
-  border-radius: 6px;
   flex: 1;
+  height: 12px;
+  background: #f3f0ff;
+  border-radius: 999px;
+  overflow: hidden;
 }
 
 .bar {
-  height: 10px;
-  background: #c8c4fa;
-  border-radius: 6px;
+  height: 12px;
+  background: #c9c2f9;
+  border-radius: 999px;
 }
 
 .qty {
@@ -399,5 +403,46 @@ onBeforeUnmount(() => {
   text-align: right;
   font-size: 12px;
   color: #6b7280;
+}
+
+/* Trục số bên dưới giống Figma */
+.best-axis {
+  margin-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #9ca3af;
+  padding-top: 6px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .page {
+    padding: 20px 16px 24px;
+  }
+
+  .dash-panel {
+    padding: 20px;
+  }
+
+  .stats-row {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .best-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .best-name {
+    width: 100%;
+  }
+
+  .qty {
+    align-self: flex-end;
+  }
 }
 </style>

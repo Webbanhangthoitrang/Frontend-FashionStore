@@ -112,46 +112,6 @@
             </div>
 
             <div v-else class="pc-upload-placeholder">
-              <div class="pc-upload-icon">
-                <svg
-                  width="80"
-                  height="80"
-                  viewBox="0 0 80 80"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <mask
-                    id="mask0_edit"
-                    style="mask-type:alpha"
-                    maskUnits="userSpaceOnUse"
-                    x="10"
-                    y="10"
-                    width="60"
-                    height="60"
-                  >
-                    <path
-                      d="M10 18C10 14.2288 10 12.3431 11.1716 11.1716C12.3431 10 14.2288 10 18 10H62C65.7712 10 67.6569 10 68.8284 11.1716C70 12.3431 70 14.2288 70 18V62C70 65.7712 70 67.6569 68.8284 68.8284C67.6569 70 65.7712 70 62 70H18C14.2288 70 12.3431 70 11.1716 68.8284C10 67.6569 10 65.7712 10 62V18Z"
-                      fill="black"
-                    />
-                  </mask>
-                  <g mask="url(#mask0_edit)">
-                    <path
-                      d="M62.0127 -2.88965C65.7779 -3.09883 67.6608 -3.20338 68.8955 -2.09863C70.13 -0.993815 70.2342 0.889167 70.4434 4.6543L73.165 53.6348C73.2565 55.2808 71.9464 56.6658 70.2979 56.666C70.1075 56.666 69.9247 56.5906 69.79 56.4561L59.4951 46.1611C58.1621 44.8281 57.4952 44.1613 56.667 44.1611C55.8386 44.1611 55.1712 44.8278 53.8379 46.1611L48.1436 51.8564C47.4503 52.5497 47.1034 52.8958 46.6768 52.8867C46.2499 52.8774 45.9177 52.5161 45.2549 51.793L30.9473 36.1846C29.7192 34.8449 29.1051 34.1747 28.335 34.1045C27.5647 34.0344 26.8122 34.6027 25.3086 35.7393C21.394 38.6982 14.5385 43.333 10 43.333V7.55859C10 3.98093 9.99997 2.19183 11.0938 1.03516C12.1879 -0.121504 13.9781 -0.221112 17.5566 -0.419922L62.0127 -2.88965ZM55 20C52.2386 20 50 22.2386 50 25C50.0002 27.7613 52.2387 30 55 30C57.7613 30 59.9998 27.7613 60 25C60 22.2386 57.7614 20 55 20Z"
-                      fill="#666666"
-                    />
-                  </g>
-                  <path
-                    d="M40 70H66C68.2091 70 70 68.2091 70 66V14C70 11.7909 68.2091 10 66 10H14C11.7909 10 10 11.7909 10 14V40"
-                    stroke="#666666"
-                    stroke-width="3"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M26.6666 53.333V51.833H28.1666V53.333H26.6666ZM11.0606 71.0603C10.4748 71.6461 9.52508 71.6461 8.9393 71.0603C8.35351 70.4746 8.35351 69.5248 8.9393 68.939L9.99996 69.9997L11.0606 71.0603ZM26.6666 69.9997H25.1666V53.333H26.6666H28.1666V69.9997H26.6666ZM26.6666 53.333V54.833H9.99996V53.333V51.833H26.6666V53.333ZM26.6666 53.333L27.7273 54.3937L11.0606 71.0603L9.99996 69.9997L8.9393 68.939L25.606 52.2723L26.6666 53.333Z"
-                    fill="#666666"
-                  />
-                </svg>
-              </div>
               <span class="pc-upload-text">Tải ảnh lên</span>
             </div>
           </label>
@@ -197,52 +157,104 @@
                   {{ c.name }}
                 </option>
               </select>
-        
             </div>
           </div>
         </div>
       </section>
 
-      <!-- BIẾN THỂ -->
+      <!-- BIẾN THỂ – giống ProductCreate -->
       <section class="pc-block">
         <h2 class="pc-block-title">Biến thể</h2>
 
         <div class="pc-variant-box">
-          <!-- Dòng khai báo biến thể -->
-          <div class="pc-variant-row">
-            <div class="pc-field">
-              <label class="pc-label">Biến thể 1</label>
-              <input
-                v-model.trim="variantName"
-                type="text"
-                class="pc-input"
-                placeholder='VD: "Màu/ Size"'
-              />
+          <!-- CÁC BLOCK BIẾN THỂ 1, 2,... -->
+          <div
+            v-for="(vForm, idx) in variantForms"
+            :key="vForm.id"
+            class="pc-variant-row"
+          >
+            <div class="pc-variant-row-header">
+              <span class="pc-label">Biến thể {{ idx + 1 }}</span>
+
+              <button
+                v-if="variantForms.length > 1"
+                type="button"
+                class="pc-variant-remove"
+                @click="removeVariantForm(idx)"
+                aria-label="Xoá biến thể"
+              >
+                <svg viewBox="0 0 24 24" class="pc-variant-remove-icon">
+                  <circle cx="12" cy="12" r="11" />
+                  <rect x="7" y="11" width="10" height="2" rx="1" />
+                </svg>
+              </button>
             </div>
 
-            <div class="pc-field">
-              <label class="pc-label">Giá trị biến thể</label>
-              <input
-                v-model.trim="variantValuesText"
-                type="text"
-                class="pc-input"
-                placeholder='VD: "Trắng/ S, Trắng/ M"'
-              />
-            </div>
+            <!-- ĐÃ LƯU -->
+            <template v-if="vForm.saved">
+              <div class="pc-field">
+                <div class="pc-input pc-input--readonly">
+                  {{ vForm.name }}
+                </div>
+              </div>
+
+              <div class="pc-field">
+                <label class="pc-label">Giá trị biến thể</label>
+                <div class="pc-tags">
+                  <span v-for="val in vForm.values" :key="val" class="pc-tag">
+                    {{ val }}
+                  </span>
+                </div>
+              </div>
+            </template>
+
+            <!-- ĐANG NHẬP -->
+            <template v-else>
+              <div class="pc-field">
+                <input
+                  v-model="vForm.name"
+                  type="text"
+                  class="pc-input"
+                  placeholder='VD: "Màu"'
+                />
+              </div>
+
+              <div class="pc-field">
+                <label class="pc-label">Giá trị biến thể</label>
+                <input
+                  v-model="vForm.valuesText"
+                  type="text"
+                  class="pc-input"
+                  placeholder='VD: "Hồng, Trắng"'
+                />
+                <p class="pc-hint">
+                  Nhập nhiều giá trị, cách nhau bằng dấu phẩy.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="pc-variant-save"
+                @click="saveVariantForm(idx)"
+              >
+                Lưu biến thể
+              </button>
+            </template>
           </div>
 
-          <button type="button" class="pc-link-add" @click="addVariants">
+          <!-- Thêm biến thể -->
+          <button type="button" class="pc-link-add" @click="addVariantForm">
             + Thêm biến thể
           </button>
 
-          <!-- Card + Bảng biến thể -->
+          <!-- BẢNG BIẾN THỂ (đã trộn) -->
           <div class="pc-variant-card">
             <div class="pc-variant-top">
               <div class="pc-select-wrap pc-select-small">
                 <select v-model="filterVariant" class="pc-select">
                   <option value="">Tất cả biến thể</option>
-                  <option v-for="v in variants" :key="v.id" :value="v.id">
-                    {{ v.name }}
+                  <option v-for="row in variants" :key="row.id" :value="row.id">
+                    {{ row.name }}
                   </option>
                 </select>
               </div>
@@ -252,15 +264,8 @@
               <table class="pc-table">
                 <thead>
                   <tr>
-                    <th class="pc-col-check">
-                      <input
-                        type="checkbox"
-                        class="pc-checkbox"
-                        :checked="isAllChecked"
-                        @change="toggleCheckAll($event)"
-                      />
-                    </th>
-                    <th class="pc-col-name">Màu/ Size</th>
+                    <th class="pc-col-check"></th>
+                    <th class="pc-col-name">{{ variantHeaderLabel }}</th>
                     <th class="pc-col-price">Giá vốn</th>
                     <th class="pc-col-price">Giá bán</th>
                     <th class="pc-col-action"></th>
@@ -268,14 +273,9 @@
                 </thead>
 
                 <tbody>
-                  <!-- Hàng biến thể -->
                   <tr v-for="row in filteredVariantRows" :key="row.id">
                     <td class="pc-cell-center">
-                      <input
-                        type="checkbox"
-                        class="pc-checkbox"
-                        v-model="row.checked"
-                      />
+                      <input type="checkbox" class="pc-checkbox" />
                     </td>
                     <td class="pc-cell-name">
                       {{ row.name }}
@@ -283,10 +283,10 @@
                     <td>
                       <div class="pc-price-input-wrap">
                         <input
-                        v-model.number="row.costPrice"
-                        type="text"
-                        inputmode="decimal"
-                        class="pc-input-sm pc-price-input"
+                          v-model.number="row.costPrice"
+                          type="text"
+                          inputmode="decimal"
+                          class="pc-input-sm pc-price-input"
                         />
                         <span class="pc-price-suffix">đ</span>
                       </div>
@@ -294,10 +294,10 @@
                     <td>
                       <div class="pc-price-input-wrap">
                         <input
-                        v-model.number="row.salePrice"
-                        type="text"
-                        inputmode="decimal"
-                        class="pc-input-sm pc-price-input"
+                          v-model.number="row.salePrice"
+                          type="text"
+                          inputmode="decimal"
+                          class="pc-input-sm pc-price-input"
                         />
                         <span class="pc-price-suffix">đ</span>
                       </div>
@@ -307,52 +307,31 @@
                         type="button"
                         class="pc-icon-btn"
                         aria-label="Xoá biến thể"
-                        @click="removeVariant(row.id)"
+                        @click="removeVariantRow(row.id)"
                       >
-                        <svg width="30" height="30" viewBox="0 0 35 35" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8.75 7.29232C8.55661 7.29232 8.37115 7.36914 8.2344 7.50589C8.09766 7.64263 8.02083 7.8281 8.02083 8.02148V9.47982C8.02083 9.6722 8.09685 9.85679 8.23233 9.99336C8.36782 10.1299 8.55179 10.2074 8.74417 10.209H26.2558C26.4482 10.2074 26.6322 10.1299 26.7677 9.99336C26.9032 9.85679 26.9792 9.6722 26.9792 9.47982V8.02148C26.9792 7.8281 26.9023 7.64263 26.7656 7.50589C26.6289 7.36914 26.4434 7.29232 26.25 7.29232H8.75ZM6.5625 9.47982C6.56242 9.94197 6.70872 10.3923 6.98041 10.7661C7.25209 11.14 7.63521 11.4182 8.07479 11.5609L8.34896 14.584H7.29167C7.09828 14.584 6.91281 14.6608 6.77607 14.7976C6.63932 14.9343 6.5625 15.1198 6.5625 15.3132C6.5625 15.5065 6.63932 15.692 6.77607 15.8287C6.91281 15.9655 7.09828 16.0423 7.29167 16.0423H8.48167L9.43396 26.5146C9.49981 27.2393 9.83416 27.9132 10.3714 28.404C10.9086 28.8948 11.6098 29.167 12.3375 29.1673H22.6596C23.3875 29.1674 24.0891 28.8953 24.6266 28.4044C25.1642 27.9136 25.4987 27.2395 25.5646 26.5146L26.5183 16.0423H27.7083C27.9017 16.0423 28.0872 15.9655 28.2239 15.8287C28.3607 15.692 28.4375 15.5065 28.4375 15.3132C28.4375 15.1198 28.3607 14.9343 28.2239 14.7976C28.0872 14.6608 27.9017 14.584 27.7083 14.584H26.651L26.9252 11.5609C27.3648 11.4182 27.7479 11.14 28.0196 10.7661C28.2913 10.3923 28.4376 9.94197 28.4375 9.47982V8.02148C28.4375 7.44132 28.207 6.88492 27.7968 6.47469C27.3866 6.06445 26.8302 5.83398 26.25 5.83398H8.75C8.16984 5.83398 7.61344 6.06445 7.2032 6.47469C6.79297 6.88492 6.5625 7.44132 6.5625 8.02148V9.47982ZM10.8865 26.3819L9.54917 11.6673H25.4523L24.1135 26.3819C24.0808 26.7445 23.9136 27.0817 23.6448 27.3273C23.376 27.5728 23.0251 27.709 22.661 27.709H12.339C11.9749 27.709 11.624 27.5728 11.3552 27.3273C11.0864 27.0817 10.9192 26.7445 10.8865 26.3819ZM16.0417 15.3132C16.0417 15.1198 15.9648 14.9343 15.8281 14.7976C15.6914 14.6608 15.5059 14.584 15.3125 14.584C15.1191 14.584 14.9336 14.6608 14.7969 14.7976C14.6602 14.9343 14.5833 15.1198 14.5833 15.3132V24.0632C14.5833 24.2565 14.6602 24.442 14.7969 24.5787C14.9336 24.7155 15.1191 24.7923 15.3125 24.7923C15.5059 24.7923 15.6914 24.7155 15.8281 24.5787C15.9648 24.442 16.0417 24.2565 16.0417 24.0632V15.3132ZM20.4167 15.3132C20.4167 15.1198 20.3398 14.9343 20.2031 14.7976C20.0664 14.6608 19.8809 14.584 19.6875 14.584C19.4941 14.584 19.3086 14.6608 19.1719 14.7976C19.0352 14.9343 18.9583 15.1198 18.9583 15.3132V24.0632C18.9583 24.2565 19.0352 24.442 19.1719 24.5787C19.3086 24.7155 19.4941 24.7923 19.6875 24.7923C19.8809 24.7923 20.0664 24.7155 20.2031 24.5787C20.3398 24.442 20.4167 24.2565 20.4167 24.0632V15.3132Z" fill="#5F5F5F"/>
+                        <!-- icon thùng rác -->
+                        <svg
+                          width="30"
+                          height="30"
+                          viewBox="0 0 35 35"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            clip-rule="evenodd"
+                            d="M8.75 7.29232C8.55661 7.29232 8.37115 7.36914 8.2344 7.50589C8.09766 7.64263 8.02083 7.8281 8.02083 8.02148V9.47982C8.02083 9.6722 8.09685 9.85679 8.23233 9.99336C8.36782 10.1299 8.55179 10.2074 8.74417 10.209H26.2558C26.4482 10.2074 26.6322 10.1299 26.7677 9.99336C26.9032 9.85679 26.9792 9.6722 26.9792 9.47982V8.02148C26.9792 7.8281 26.9023 7.64263 26.7656 7.50589C26.6289 7.36914 26.4434 7.29232 26.25 7.29232H8.75Z"
+                            fill="#5F5F5F"
+                          />
                         </svg>
-
-
-
                       </button>
                     </td>
                   </tr>
 
-                  <!-- Empty -->
+                  <!-- EMPTY -->
                   <tr v-if="!filteredVariantRows.length">
                     <td colspan="5" class="pc-empty-cell">
                       <div class="pc-empty-inner">
-                        <div class="pc-empty-icon">
-                          <svg
-                            width="100"
-                            height="100"
-                            viewBox="0 0 100 100"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M16.6666 24.834C16.6666 22.9484 16.6666 22.0056 17.2524 21.4198C17.8382 20.834 18.781 20.834 20.6666 20.834H31.639C32.4482 20.834 32.8528 20.834 33.1325 21.071C33.4123 21.3079 33.4788 21.707 33.6118 22.5052L35.1381 31.6628C35.2711 32.4609 35.3376 32.86 35.6174 33.097C35.8971 33.334 36.3017 33.334 37.1109 33.334H62.889C63.6982 33.334 64.1028 33.334 64.3825 33.097C64.6623 32.86 64.7288 32.4609 64.8618 31.6628L66.3881 22.5052C66.5211 21.707 66.5876 21.3079 66.8674 21.071C67.1471 20.834 67.5517 20.834 68.3609 20.834H79.3333C81.2189 20.834 82.1617 20.834 82.7475 21.4198C83.3333 22.0056 83.3333 22.9484 83.3333 24.834V83.5007C83.3333 85.3863 83.3333 86.3291 82.7475 86.9149C82.1617 87.5006 81.2189 87.5006 79.3333 87.5006H20.6666C18.781 87.5006 17.8382 87.5006 17.2524 86.9149C16.6666 86.3291 16.6666 85.3863 16.6666 83.5006V24.834Z"
-                              fill="#7E869E"
-                              fill-opacity="0.25"
-                            />
-                            <rect
-                              x="16.6666"
-                              y="20.834"
-                              width="66.6667"
-                              height="66.6667"
-                              rx="5"
-                              stroke="#7E7E7E"
-                              stroke-width="3"
-                            />
-                            <path
-                              d="M37.5 58.334L62.5 58.334"
-                              stroke="#7E7E7E"
-                              stroke-width="3"
-                              stroke-linecap="round"
-                            />
-                          </svg>
-                        </div>
                         <p>Tạo biến thể của bạn</p>
                       </div>
                     </td>
@@ -365,11 +344,11 @@
                     <td>
                       <div class="pc-price-input-wrap">
                         <input
-                        v-model.number="allCostPrice"
-                        type="number"
-                        min="0"
-                        class="pc-input-sm pc-price-input"
-                        @input="applyAllCostPrice"
+                          v-model.number="allCost"
+                          type="number"
+                          min="0"
+                          class="pc-input-sm pc-price-input"
+                          @input="applyAllCost"
                         />
                         <span class="pc-price-suffix">đ</span>
                       </div>
@@ -377,11 +356,11 @@
                     <td>
                       <div class="pc-price-input-wrap">
                         <input
-                        v-model.number="allSalePrice"
-                        type="text"
-                        inputmode="decimal"
-                        class="pc-input-sm pc-price-input"
-                        @input="applyAllSalePrice"
+                          v-model.number="allSale"
+                          type="text"
+                          inputmode="decimal"
+                          class="pc-input-sm pc-price-input"
+                          @input="applyAllSale"
                         />
                         <span class="pc-price-suffix">đ</span>
                       </div>
@@ -423,14 +402,14 @@ const route = useRoute();
 const router = useRouter();
 const productId = route.params.id;
 
-/* FORM CƠ BẢN */
+/* ========= FORM CƠ BẢN ========= */
 const form = ref({
   name: "",
   description: "",
   categoryId: "",
 });
 
-/* ẢNH CHÍNH */
+/* ========= ẢNH ========= */
 const imagePreview = ref("");
 const imageFile = ref(null);
 
@@ -441,7 +420,7 @@ const onFileChange = (e) => {
   imagePreview.value = URL.createObjectURL(file);
 };
 
-/* ẢNH PHỤ (UI) */
+/* ========= ẢNH PHỤ (UI) ========= */
 const extraInput = ref(null);
 const extraFiles = ref([]);
 const extraPreviews = ref([]);
@@ -464,92 +443,195 @@ const removeExtra = (index) => {
   extraPreviews.value.splice(index, 1);
 };
 
-/* DANH MỤC */
+/* ========= DANH MỤC ========= */
 const categories = ref([]);
 
 const fetchCategories = async () => {
   try {
-    const { data } = await request("/categories");
+    const res = await request("/categories");
+    const data = res.data ?? res;
     categories.value = Array.isArray(data) ? data : data.items || [];
   } catch (err) {
     console.error("Lỗi load categories:", err);
   }
 };
 
-/* BIẾN THỂ */
+/* ========= BIẾN THỂ – giống ProductCreate ========= */
 let seed = 1;
-const variants = ref([]);
-const variantName = ref("Màu/ Size");
-const variantValuesText = ref("");
+
+const variantForms = ref([
+  { id: 1, name: "", valuesText: "", values: [], saved: false },
+]);
+
+const variants = ref([]); // các dòng đã trộn / từ API
 const filterVariant = ref("");
+const allCost = ref(null);
+const allSale = ref(null);
 
-const allCostPrice = ref(null);
-const allSalePrice = ref(null);
+/* Các form đã lưu */
+const savedVariantForms = computed(() =>
+  variantForms.value.filter((v) => v.saved && v.values.length)
+);
 
-const addVariants = () => {
-  const name = variantName.value.trim();
-  const values = variantValuesText.value
+/* Nhãn cột đầu bảng (Màu/ Size,...) */
+const variantHeaderLabel = computed(() => {
+  const saved = savedVariantForms.value;
+  if (!saved.length) return "Biến thể";
+  if (saved.length === 1) return saved[0].name;
+  return saved
+    .slice(0, 2)
+    .map((v) => v.name)
+    .join("/ ");
+});
+
+/* TÁCH tên biến thể: "Trắng/ S" → ["Trắng","S"] */
+const splitVariantName = (name) => {
+  if (!name) return [""];
+  if (name.includes("/")) return name.split("/").map((s) => s.trim());
+  if (name.includes(",")) return name.split(",").map((s) => s.trim());
+  return [name.trim()];
+};
+
+/* DỰNG LẠI "Biến thể 1/2..." TỪ DANH SÁCH variants LẤY TỪ API */
+const initVariantFormsFromVariants = () => {
+  if (!variants.value.length) {
+    variantForms.value = [
+      { id: 1, name: "", valuesText: "", values: [], saved: false },
+    ];
+    return;
+  }
+
+  const sampleParts = splitVariantName(variants.value[0].name);
+  const groupCount = sampleParts.length;
+
+  const groupValues = Array.from({ length: groupCount }, () => new Set());
+
+  variants.value.forEach((v) => {
+    const parts = splitVariantName(v.name);
+    parts.forEach((p, idx) => {
+      if (!p) return;
+      if (!groupValues[idx]) groupValues[idx] = new Set();
+      groupValues[idx].add(p);
+    });
+  });
+
+  variantForms.value = groupValues.map((set, idx) => {
+    const valuesArr = Array.from(set);
+    return {
+      id: idx + 1,
+      name: `Biến thể ${idx + 1}`, // nếu muốn có "Màu/Size" bạn có thể cho sửa tay
+      valuesText: valuesArr.join(", "),
+      values: valuesArr,
+      saved: true, // đã lưu nên hiển thị dạng chip
+    };
+  });
+};
+
+/* Dùng khi user chỉnh lại form & bấm Lưu biến thể → sinh lại bảng */
+const rebuildVariantRows = () => {
+  const saved = savedVariantForms.value;
+  if (!saved.length) {
+    variants.value = [];
+    return;
+  }
+
+  const rows = [];
+  const first = saved[0];
+  const second = saved[1];
+
+  if (!second) {
+    first.values.forEach((v1) => {
+      rows.push({
+        id: seed++,
+        backendId: null,
+        name: v1,
+        costPrice: 0,
+        salePrice: 0,
+      });
+    });
+  } else {
+    first.values.forEach((v1) => {
+      second.values.forEach((v2) => {
+        rows.push({
+          id: seed++,
+          backendId: null,
+          name: `${v1}/ ${v2}`,
+          costPrice: 0,
+          salePrice: 0,
+        });
+      });
+    });
+  }
+
+  variants.value = rows;
+};
+
+/* Thêm / lưu / xoá form biến thể */
+const addVariantForm = () => {
+  variantForms.value.push({
+    id: Date.now() + variantForms.value.length,
+    name: "",
+    valuesText: "",
+    values: [],
+    saved: false,
+  });
+};
+
+const saveVariantForm = (index) => {
+  const vForm = variantForms.value[index];
+  if (!vForm.name || !vForm.valuesText) return;
+
+  const values = vForm.valuesText
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
 
-  if (!name || !values.length) return;
+  if (!values.length) return;
 
-  values.forEach((val) => {
-    variants.value.push({
-      id: seed++,
-      name: val, // ví dụ "Trắng/ S"
-      costPrice: 0,
-      salePrice: 0,
-      checked: false,
-    });
-  });
+  vForm.values = values;
+  vForm.saved = true;
 
-  variantValuesText.value = "";
+  // Khi bấm Lưu biến thể → sinh lại bảng dựa trên group mới
+  rebuildVariantRows();
 };
 
+const removeVariantForm = (index) => {
+  variantForms.value.splice(index, 1);
+  rebuildVariantRows();
+};
+
+/* Lọc bảng theo dropdown "Tất cả biến thể" */
 const filteredVariantRows = computed(() => {
   if (!filterVariant.value) return variants.value;
   const id = Number(filterVariant.value);
   return variants.value.filter((v) => v.id === id);
 });
 
-const isAllChecked = computed(() => {
-  const rows = filteredVariantRows.value;
-  if (!rows.length) return false;
-  return rows.every((r) => r.checked);
-});
+/* Xoá 1 dòng trong bảng */
+const removeVariantRow = (id) => {
+  variants.value = variants.value.filter((r) => r.id !== id);
+};
 
-const toggleCheckAll = (event) => {
-  const checked = event.target.checked;
-  filteredVariantRows.value.forEach((row) => {
-    row.checked = checked;
+/* Cài đặt giá chung */
+const applyAllCost = () => {
+  variants.value.forEach((r) => {
+    r.costPrice = allCost.value || 0;
   });
 };
 
-const removeVariant = (id) => {
-  variants.value = variants.value.filter((v) => v.id !== id);
-};
-
-const applyAllCostPrice = () => {
-  variants.value.forEach((row) => {
-    row.costPrice = allCostPrice.value || 0;
+const applyAllSale = () => {
+  variants.value.forEach((r) => {
+    r.salePrice = allSale.value || 0;
   });
 };
 
-const applyAllSalePrice = () => {
-  variants.value.forEach((row) => {
-    row.salePrice = allSalePrice.value || 0;
-  });
-};
-
-/* LOAD PRODUCT */
+/* ========= LOAD PRODUCT + VARIANTS TỪ BACKEND ========= */
 const saving = ref(false);
 
 const fetchProduct = async () => {
   try {
-    const { data } = await request(`/products/${productId}`);
-    const p = data;
+    const res = await request(`/products/${productId}`);
+    const p = res.data ?? res;
 
     form.value.name = p.name ?? "";
     form.value.description = p.description ?? "";
@@ -567,26 +649,34 @@ const fetchProduct = async () => {
         ? rawThumb
         : `${API_BASE_URL}${rawThumb}`;
     }
-
-    variants.value = Array.isArray(p.variants)
-      ? p.variants.map((v) => {
-          const localId = v.id ?? seed++;
-          return {
-            id: localId,
-            name: v.name || v.optionName || v.value || "Biến thể",
-            costPrice: Number(v.costPrice ?? v.importPrice ?? 0),
-            salePrice: Number(v.salePrice ?? v.price ?? 0),
-            checked: false,
-          };
-        })
-      : [];
   } catch (err) {
     console.error("Lỗi load product:", err);
     alert(err?.message || "Không tải được thông tin sản phẩm.");
   }
 };
 
-/* SUBMIT */
+const fetchProductVariants = async () => {
+  try {
+    const res = await request(`/products/${productId}/variants`);
+    const data = res.data ?? res;
+    const list = Array.isArray(data) ? data : data.items || [];
+
+    variants.value = list.map((v) => ({
+      id: seed++,
+      backendId: v.id ?? v.variantId ?? null,
+      name: v.name || v.optionName || v.value || "Biến thể",
+      costPrice: Number(v.costPrice ?? v.importPrice ?? 0),
+      salePrice: Number(v.salePrice ?? v.price ?? 0),
+    }));
+
+    // ⭐ Dựng lại "Biến thể 1/2..." để phần trên có sẵn dữ liệu
+    initVariantFormsFromVariants();
+  } catch (err) {
+    console.error("Lỗi load variants:", err);
+  }
+};
+
+/* ========= SUBMIT ========= */
 const onSubmit = async () => {
   try {
     saving.value = true;
@@ -596,12 +686,12 @@ const onSubmit = async () => {
       description: form.value.description,
       categoryId: form.value.categoryId || null,
       variants: variants.value.map((v) => ({
-        id: v.id,
+        id: v.backendId, // có backendId thì update, null thì tạo mới
         name: v.name,
         costPrice: v.costPrice,
         salePrice: v.salePrice,
       })),
-      // TODO: xử lý imageFile + extraFiles nếu backend hỗ trợ upload file
+      // TODO: imageFile + extraFiles nếu backend hỗ trợ upload file
     };
 
     await request(`/products/${productId}`, {
@@ -619,13 +709,13 @@ const onSubmit = async () => {
   }
 };
 
-/* QUAY LẠI */
+/* ========= QUAY LẠI ========= */
 const goBack = () => {
   router.back();
 };
 
 onMounted(async () => {
-  await Promise.all([fetchCategories(), fetchProduct()]);
+  await Promise.all([fetchCategories(), fetchProduct(), fetchProductVariants()]);
 });
 </script>
 
@@ -685,11 +775,11 @@ onMounted(async () => {
   padding: 16px 18px 20px;
   box-sizing: border-box;
   margin-bottom: 18px;
-
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
 .pc-block-title {
-
   font-weight: 600;
   margin-bottom: 12px;
 }
@@ -718,16 +808,8 @@ onMounted(async () => {
 .pc-upload-placeholder {
   height: 100%;
   display: flex;
-  flex-direction: row;
-  gap: 6px;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
-}
-
-.pc-upload-icon svg {
-  width: 40px;
-  height: 40px;
 }
 
 .pc-upload-text {
@@ -753,7 +835,6 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-    background: #ffffff;
 }
 
 /* ẢNH PHỤ */
@@ -857,7 +938,11 @@ onMounted(async () => {
   background: #ffffff;
   outline: none;
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.pc-input--readonly {
+  background: #f9fafb;
+  cursor: default;
 }
 
 .pc-textarea {
@@ -877,6 +962,12 @@ onMounted(async () => {
   box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
 }
 
+.pc-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
 /* SELECT CUSTOM */
 .pc-select-wrap {
   position: relative;
@@ -887,20 +978,16 @@ onMounted(async () => {
   padding-right: 28px;
 }
 
-
-
-
-
 .pc-select-small .pc-select {
   height: 34px;
   padding-top: 6px;
   padding-bottom: 6px;
 }
 
-/* ===== BIẾN THỂ & BẢNG – giống Figma ===== */
+/* ===== BIẾN THỂ BOX ===== */
 .pc-variant-box {
-  border: 1px solid #e5e7eb;
   border-radius: 16px;
+  border: 1px solid #e5e7eb;
   padding: 16px;
   background: #ffffff;
   display: flex;
@@ -909,12 +996,68 @@ onMounted(async () => {
 }
 
 .pc-variant-row {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 6px;
+  gap: 10px;
 }
 
+.pc-variant-row:last-of-type {
+  border-bottom: none;
+}
+
+.pc-variant-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* NÚT LƯU BIẾN THỂ */
+.pc-variant-save {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 999px;
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.pc-variant-save:hover {
+  background: #000000;
+}
+
+/* NÚT XÓA BIẾN THỂ */
+.pc-variant-remove {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pc-variant-remove-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.pc-variant-remove-icon circle {
+  fill: #f97373;
+}
+
+.pc-variant-remove-icon rect {
+  fill: #ffffff;
+}
+
+/* LINK THÊM BIẾN THỂ */
 .pc-link-add {
   margin-top: 4px;
   margin-bottom: 8px;
@@ -931,6 +1074,22 @@ onMounted(async () => {
   text-decoration: underline;
 }
 
+/* CHIP GIÁ TRỊ BIẾN THỂ */
+.pc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pc-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 12px;
+}
+
+/* CARD BẢNG BIẾN THỂ */
 .pc-variant-card {
   background: #ffffff;
   padding: 10px 12px 12px;
@@ -955,7 +1114,6 @@ onMounted(async () => {
   font-size: 13px;
 }
 
-/* header */
 .pc-table thead tr th {
   padding: 8px 16px 10px;
   font-weight: 500;
@@ -978,7 +1136,6 @@ onMounted(async () => {
   background: #e5e7eb;
 }
 
-/* body – từng hàng là pill */
 .pc-table tbody tr td {
   padding: 10px 16px;
   background: #ffffff;
@@ -1022,22 +1179,19 @@ onMounted(async () => {
 
 /* checkbox */
 .pc-checkbox {
-  -webkit-appearance: none;
-  appearance: none;          /* tắt style mặc định của browser */
+  appearance: none;
   width: 20px;
   height: 20px;
-  border-radius: 5px;      /* tròn hẳn */
+  border-radius: 5px;
   border: 1.5px solid #999999;
   background: #ffffff;
   cursor: pointer;
 }
 
-/* trạng thái được chọn */
 .pc-checkbox:checked {
-  background-color: #4f46e5; /* màu nền khi tick (giống figma) */
+  background-color: #4f46e5;
   border-color: #4f46e5;
 }
-
 
 /* input giá */
 .pc-price-input-wrap {
@@ -1068,10 +1222,11 @@ onMounted(async () => {
   color: #6b7280;
 }
 
+/* icon nút xoá */
 .pc-icon-btn {
-  background: transparent;   /* bỏ màu nền */
-  border: none;              /* bỏ viền */
-  padding: 0;                /* sát icon */
+  background: transparent;
+  border: none;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1091,10 +1246,6 @@ onMounted(async () => {
   gap: 8px;
   color: #6b7280;
   font-size: 13px;
-}
-
-.pc-empty-icon {
-  margin-bottom: 4px;
 }
 
 /* footer row */

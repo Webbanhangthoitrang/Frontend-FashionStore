@@ -223,18 +223,58 @@ function onDelete(a) {
   showDeletePopup.value = true
 }
 async function onSetDefault(a) {
+  
   if (a.isDefault) return
+
+  const ok = confirm('Bạn có chắc muốn đặt làm địa chỉ mặc định này?')
+  if (!ok) return
+
   try {
-    await updateAddress(a.id, { isDefault: true })
+    
+    const payload = {
+      fullName: (a.fullName || a.name || '').trim(),
+      phone: String(a.phone || '').replace(/\s+/g, ''),
+
+      addressLine: (a.addressLine || a.detail || '').trim(),
+      province:
+        a.province ||
+        a.provinceName ||
+        '',
+      city:
+        a.district ||
+        a.city ||
+        a.districtName ||
+        '',
+      ward:
+        a.ward ||
+        a.wardName ||
+        '',
+
+      
+      provinceCode: String(a.provinceCode || ''),
+      districtCode: String(a.districtCode || ''),
+      wardCode: String(a.wardCode || ''),
+
+      
+      isDefault: true,
+    }
+
+    console.log('Payload update mặc định:', payload)
+
+    await updateAddress(a.id, payload)
     await loadData()
+    alert('Cập nhật thành công') 
   } catch (e) {
     alert(e?.response?.data?.message || e?.message || 'Không đặt được mặc định')
   }
 }
 
+
+
 async function handleUpdated() {
   showPopup.value = false
   await loadData()
+   alert('Cập nhật thành công')
 }
 
 /* ====== Helpers hiển thị ====== */
