@@ -161,12 +161,12 @@
                 <input
                   id="avatar"
                   type="file"
-                  accept=".png"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
                   class="uploader__input"
                   @change="onFileChange"
                 />
-                <p class="uploader__hint">Dung lượng file tối đa 1 MB</p>
-                <p class="uploader__hint">Định dạng: .PNG</p>
+                <p class="uploader__hint">Dung lượng file tối đa 5 MB</p>
+                <p class="uploader__hint">Định dạng: PNG, JPG, JPEG, WebP</p>
               </div>
             </div>
           </section>
@@ -188,7 +188,7 @@ import ClientFooter from '../../components/client/ClientFooter.vue'
 import AccountSidebar from '../../components/client/AccountSidebar.vue'
 import { getProfile } from '../../services/authService'
 import { request } from '../../services/http'
-import { useAuthStore, clearAuth } from '../../stores/auth'
+import { useAuthStore, clearAuth, updateUser } from '../../stores/auth'
 
 const router = useRouter()
 const { state, isLoggedIn } = useAuthStore()
@@ -324,25 +324,67 @@ async function onSubmit() {
     return
   }
 
-  const payload = {
-    name: form.fullname || form.username,
-    email: form.email,
-    phoneNumber: form.phone || null,
-    dateOfBirth: form.dob ? dobToISO(form.dob) : null,
-    gender: form.gender,
-  }
-
   try {
     loading.value = true
 
-    const res = await request('/users/me', {
-      method: 'PUT',
-      body: payload,
-    })
+    let res
+    // Nếu có ảnh avatar thì dùng FormData, không thì dùng JSON
+    if (fileObj.value) {
+      const formData = new FormData()
+      formData.append('avatar', fileObj.value)
+      formData.append('name', form.fullname || form.username)
+      formData.append('email', form.email)
+      if (form.phone) formData.append('phoneNumber', form.phone)
+      if (form.dob) formData.append('dateOfBirth', dobToISO(form.dob))
+      formData.append('gender', form.gender)
+
+      res = await request('/users/me', {
+        method: 'PUT',
+        data: formData,
+      })
+    } else {
+      const payload = {
+        name: form.fullname || form.username,
+        email: form.email,
+        phoneNumber: form.phone || null,
+        dateOfBirth: form.dob ? dobToISO(form.dob) : null,
+        gender: form.gender,
+      }
+
+      res = await request('/users/me', {
+        method: 'PUT',
+        data: payload,
+      })
+    }
 
     successMessage.value = res?.message || 'Lưu thông tin thành công!'
 
+    // Reset file object sau khi upload thành công
+    fileObj.value = null
+
+    // Refresh profile data
     await loadProfile()
+
+    // Cập nhật thông tin vào auth store để sidebar hiển thị ngay
+    const updatedData = {
+      name: form.fullname || form.username,
+      email: form.email,
+      phoneNumber: form.phone,
+      dateOfBirth: form.dob ? dobToISO(form.dob) : null,
+      gender: form.gender,
+    }
+    
+    // Nếu có avatarUrl mới từ response hoặc từ preview
+    if (res?.user?.avatarUrl) {
+      updatedData.avatarUrl = res.user.avatarUrl
+    } else if (avatarPreview.value && avatarPreview.value.startsWith('blob:')) {
+      // Nếu chỉ có preview tạm thì dùng preview (trường hợp backend không trả về avatarUrl)
+      updatedData.avatarUrl = avatarPreview.value
+    } else if (avatarPreview.value) {
+      updatedData.avatarUrl = avatarPreview.value
+    }
+    
+    updateUser(updatedData)
   } catch (error) {
     console.error('Lỗi cập nhật hồ sơ', error)
     errorMessage.value =
@@ -353,28 +395,30 @@ async function onSubmit() {
 }
 
 /* ============================================
-   XỬ LÝ CHỌN AVATAR (demo)
+   XỬ LÝ CHỌN AVATAR
 ============================================ */
 function onFileChange(e) {
   const file = e.target.files?.[0]
   if (!file) return
 
-  if (file.type !== 'image/png') {
-    alert('Chỉ cho phép ảnh .PNG')
+  // Chấp nhận PNG, JPG, JPEG, WebP
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    errorMessage.value = 'Chỉ cho phép ảnh định dạng PNG, JPG, JPEG hoặc WebP'
     e.target.value = ''
     return
   }
 
-  if (file.size > 1024 * 1024) {
-    alert('Kích thước ảnh tối đa 1 MB')
+  if (file.size > 5 * 1024 * 1024) {
+    errorMessage.value = 'Kích thước ảnh tối đa 5 MB'
     e.target.value = ''
     return
   }
 
   fileObj.value = file
   avatarPreview.value = URL.createObjectURL(file)
-
-  alert('Ảnh đã chọn (demo, chưa upload lên server).')
+  errorMessage.value = ''
+  successMessage.value = 'Ảnh đã chọn. Nhấn "Lưu" để cập nhật.'
 }
 
 onMounted(() => {

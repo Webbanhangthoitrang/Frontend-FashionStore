@@ -90,14 +90,14 @@ import banner2 from "../../assets/banner2.png";
 import banner3 from "../../assets/banner3.png";
 import banner4 from "../../assets/banner4.png";
 
-/* ---------- Danh mục ---------- */
+/*  Danh mục  */
 const categories = ref([]);
 const categoryLoading = ref(false);
 
 // icon mặc định (data URL)
 const fallbackIcon =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="%2399A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>';
-
+//Chuyển chuỗi tiếng Việt (có dấu, khoảng trắng, ký tự đặc biệt)
 function slugify(str = "") {
   return String(str)
     .normalize("NFD")
@@ -107,12 +107,12 @@ function slugify(str = "") {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 }
-
+// Gọi API danh mục
 async function fetchCategories() {
-  categoryLoading.value = true;
+  categoryLoading.value = true;//Dùng để hiển thị giao diện "Đang tải danh mục…"
   try {
-    const raw = await getCategories();
-    const arr = Array.isArray(raw)
+    const raw = await getCategories();//gọi api
+    const arr = Array.isArray(raw)// Chuẩn hóa dữ liệu từ API: lấy ra mảng danh mục bất kể API trả về raw[], data[], items[] hoặc data.items[]
       ? raw
       : Array.isArray(raw?.data)
       ? raw.data
@@ -122,7 +122,7 @@ async function fetchCategories() {
       ? raw.data.items
       : [];
 
-    categories.value = arr.map((c) => {
+    categories.value = arr.map((c) => {// Chuẩn hóa từng danh mục thành cấu trúc thống nhất
       const name = c?.name ?? "";
       return {
         id: c?.id ?? c?._id ?? name,
@@ -139,94 +139,96 @@ async function fetchCategories() {
   }
 }
 
-/* ---------- Sản phẩm (gợi ý) ---------- */
+/*  Sản phẩm (gợi ý)  */
+//khởi tạo state
 const route = useRoute();
 const products = ref([]);
 const productLoading = ref(false);
 const searchTerm = ref("");
 const page = ref(1);
-const pageSize = ref(12);
+const pageSize = ref(12);//mỗi lần lấy 12 sản phẩm
 
 const pageTitle = computed(() =>
   searchTerm.value ? `Kết quả cho “${searchTerm.value}”` : "Gợi ý sản phẩm"
-);
-
+);// hiển thị kết quả khi tìm kiếm
+//gọi api lấy sản phẩm
 async function fetchProducts(append = false) {
-  productLoading.value = true;
+  productLoading.value = true;//bật trạng thái load
   try {
     const res = await getAllProducts({
       page: page.value,
       pageSize: pageSize.value,
-      q: searchTerm.value || undefined,
+      q: searchTerm.value || undefined,//gửi undefined để BE không xử lý tìm kiếm.
     });
-    const data = res?.data || [];
-    products.value = append ? [...products.value, ...data] : data;
+    const data = res?.data || [];// lấy dữ liệu từ api
+    products.value = append ? [...products.value, ...data] : data;//gắn sản phẩm vào state
   } catch (e) {
-    console.error("Không tải được sản phẩm", e);
+    console.error("Không tải được sản phẩm", e);//thông báo khi api lỗi
     if (!append) products.value = [];
   } finally {
     productLoading.value = false;
   }
 }
-
+//tăng số trang khi nhấn nút gợi ý sản phẩm
 function loadMore() {
   page.value += 1;
   fetchProducts(true);
 }
 
-/* ---------- Banner ---------- */
-const banners = [banner1, banner2, banner3, banner4];
-const currentIndex = ref(0);
-const intervalTime = 3000;
+/* Banner*/
+const banners = [banner1, banner2, banner3, banner4];//mảng chứa đường dẫn banber
+const currentIndex = ref(0);//hiển thị banner hiện tại đầu 
+const intervalTime = 3000;//thời gian chuyển động 3s
 let timer = null;
 
 function next() {
-  currentIndex.value = (currentIndex.value + 1) % banners.length;
+  currentIndex.value = (currentIndex.value + 1) % banners.length;//tăng lên 1 để chuyển banner thứ 2
 }
 function go(i) {
-  currentIndex.value = i;
+  currentIndex.value = i;//nhấn vào dôt để chuyển banner
 }
 function play() {
   if (timer) return;
   timer = setInterval(next, intervalTime);
-}
+}//giúp banner tự chuyển động
+//tạm dừng auto chuyển động banner khi di chuột vào
 function pause() {
   if (!timer) return;
   clearInterval(timer);
   timer = null;
 }
 
-/* ---------- Lifecycle ---------- */
+/*  Lifecycle */
 onMounted(() => {
-  // preload banner
+  //Preload hình banner để chuyển slide mượt
   banners.forEach((src) => {
     const im = new Image();
     im.src = src;
   });
 
-  // nạp danh mục 1 lần
+  // Gọi API và tải danh mục
   fetchCategories();
 
-  // sản phẩm (khởi tạo theo query?q)
+  // Đọc từ khóa tìm kiếm từ URL và tải sản phẩm
   searchTerm.value = route.query.q ? route.query.q.toString() : "";
   page.value = 1;
   fetchProducts();
 
-  // banner
+  // khởi dộng banner
   play();
 });
-
+//Dừng auto-slide banner
 onBeforeUnmount(() => {
   pause();
 });
 
-// khi query q đổi -> nạp lại sản phẩm
+// tự động tải sản phẩm tìm kiếm
 watch(
   () => route.query.q,
   () => {
-    searchTerm.value = route.query.q ? route.query.q.toString() : "";
-    page.value = 1;
-    fetchProducts();
+    searchTerm.value = route.query.q ? route.query.q.toString() : "";//Đồng bộ searchTerm với URL
+    page.value = 1;//Reset trang về 1
+    fetchProducts();//gọi api sản phẩm theo từ khóa mới
   }
 );
 </script>
@@ -243,7 +245,7 @@ watch(
 .banner {
   width: 100%;
   height: 320px;
-  overflow: hidden;
+  overflow: hidden; /*Ẩn phần ảnh bị tràn ra ngoài khung banner*/
   position: relative;
 }
 .banner__fade {
@@ -253,14 +255,14 @@ watch(
 }
 .banner__img {
   position: absolute;
-  inset: 0;
+  inset: 0; /*phủ kín toàn bộ vùng banner*/
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
-  opacity: 0;
-  transition: opacity 800ms ease-in-out;
-  pointer-events: none;
+  object-fit: contain;/*giữ nguyên tỉ lệ */
+  object-position: center;/*căn ảnh giữa khung */
+  opacity: 0;/*/*Mặc định ẩn tất cả ảnh */ 
+  transition: opacity 800ms ease-in-out;/* Khi opacity thay đổi (từ 0 → 1 hoặc ngược lại) sẽ mờ dần / hiện dần trong 0.8s, tạo hiệu ứng fade.*/
+  pointer-events: none;/*Ảnh không bắt sự kiện chuột (click, hover…)*/
 }
 .banner__img.active {
   opacity: 1;
@@ -408,21 +410,7 @@ footer {
   gap: 24px;
   align-items: stretch;
 }
-@media (max-width: 1200px) {
-  .product__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-@media (max-width: 900px) {
-  .product__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 520px) {
-  .product__grid {
-    grid-template-columns: 1fr;
-  }
-}
+
 
 /* ---------- State ---------- */
 .state {

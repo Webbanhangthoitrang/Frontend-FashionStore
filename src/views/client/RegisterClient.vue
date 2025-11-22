@@ -117,13 +117,13 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from '../../services/authService'
+import { register } from '../../services/authService'// gọi api đăng kí
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
 const { setStatus, setError } = useAuthStore()
 
-/* ====== THÔNG ĐIỆP CHUẨN THEO ĐẶC TẢ ====== */
+/* THÔNG ĐIỆP  */
 const MSG = {
   GENERIC_INPUT: 'Vui lòng nhập đầy đủ thông tin.',
   USERNAME_TAKEN: 'Tên đăng nhập đã tồn tại, vui lòng chọn tên khác.',
@@ -156,31 +156,35 @@ const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
-/* ===== HELPERS ===== */
+/*  HELPERS  */
+//Xóa thông báo
 function clearNotify() {
   errorMessage.value = ''
   successMessage.value = ''
 }
+//Gán lỗi tổng quát
 function showError(msg) {
   errorMessage.value = msg
   successMessage.value = ''
   setError(msg)
   setStatus('error')
 }
+//Gán thành công
 function showSuccess(msg) {
   successMessage.value = msg
   errorMessage.value = ''
   setError(null)
   setStatus('success')
 }
+//Xóa toàn bộ lỗi từng ô
 function clearFieldErrors() {
   Object.keys(errors).forEach(k => (errors[k] = ''))
 }
 
-/* ===== VALIDATION ===== */
-const LETTER_REGEX = /[A-Za-zÀ-ỹ]/
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PASSWORD_POLICY = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
+/* Kiểm tra dữ liệu trước khi gửi*/
+const LETTER_REGEX = /[A-Za-zÀ-ỹ]/ //Username phải có ít nhất 1 chữ cái
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/ //Email phải đúng format
+const PASSWORD_POLICY = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/ //mất khẩu phải có 8 kí tự, 1 chữ hoa, 1 kí tự đặc biệt
 
 function validateBasic() {
   clearFieldErrors()
@@ -190,17 +194,19 @@ function validateBasic() {
  
 // Username
 const username = formData.username.trim()
-
+//ko được rỗng
 if (!username) {
   errors.username = MSG.GENERIC_INPUT
   anyFieldInvalid = true
   valid = false
 }
+// phải có chữ cái
 else if (!LETTER_REGEX.test(username)) {
   errors.username = MSG.USERNAME_INVALID
   anyFieldInvalid = true
   valid = false
 }
+//đọp dài từ 4- 40
 else if (username.length < 4 || username.length > 30) {
   errors.username = 'Tên tài khoản phải có 4-30 ký tự'
   anyFieldInvalid = true
@@ -211,12 +217,12 @@ else if (username.length < 4 || username.length > 30) {
 const email = formData.email.trim()
 
 if (!email) {
-  
+  // ko rỗng
   errors.email = MSG.GENERIC_INPUT        
   anyFieldInvalid = true
   valid = false
 } else if (!EMAIL_REGEX.test(email)) {
-  
+  // đúng form
   errors.email = MSG.EMAIL_INVALID
   anyFieldInvalid = true
   valid = false
@@ -224,7 +230,7 @@ if (!email) {
 
 
 
-  // Password
+  // Password tuân thủ password policy
 if (!formData.password || !PASSWORD_POLICY.test(formData.password)) {
   errors.password = formData.password
     ? MSG.PASSWORD_POLICY           
@@ -235,6 +241,7 @@ if (!formData.password || !PASSWORD_POLICY.test(formData.password)) {
 
 
   // Confirm
+  // ko rỗng, giống password
   if (!formData.confirmPassword || formData.password !== formData.confirmPassword) {
     errors.confirmPassword = formData.confirmPassword ? MSG.PASSWORD_CONFIRM : MSG.GENERIC_INPUT
     anyFieldInvalid = true
@@ -247,7 +254,7 @@ if (!formData.password || !PASSWORD_POLICY.test(formData.password)) {
   return valid
 }
 
-/* ===== MAP LỖI API =====
+/*MAP LỖI API 
    Ưu tiên set lỗi field đúng câu chữ đặc tả. */
 function mapApiErrorToFields(err) {
   const status = err?.status
@@ -302,13 +309,12 @@ function mapApiErrorToFields(err) {
 
 /* ===== SUBMIT ===== */
 async function handleRegister() {
-  clearNotify()
+  clearNotify()//xóa thông báo cũ
   if (!validateBasic()) return
   loading.value = true
   setStatus('loading'); setError(null)
 
   try {
-    // Map đúng theo Swagger: name, email, password, phoneNumber, dateOfBirth
     const payload = {
       name: formData.username.trim(),
       email: formData.email.trim(),
@@ -317,7 +323,7 @@ async function handleRegister() {
       dateOfBirth: '2000-01-01',
     }
 
-    const resp = await register(payload)
+    const resp = await register(payload)//gửi api đăng kí
 
     // Lưu thông tin để chuyển sang bước xác minh
     sessionStorage.setItem('signup_email', payload.email)
@@ -327,7 +333,6 @@ async function handleRegister() {
 
     router.replace({ name: 'verify-code-register', query: { flow: 'signup' } })
   } catch (err) {
-    // Map theo đặc tả; nếu không nhận diện được -> lỗi hệ thống (mục 6)
     const mapped = mapApiErrorToFields(err)
     if (!mapped) showError(MSG.SYSTEM)
   } finally {

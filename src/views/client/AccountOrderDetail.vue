@@ -234,7 +234,8 @@ const fetchOrderDetail = async () => {
 
   try {
     const res = await request(`/orders/${props.id}`, { method: 'GET' })
-    order.value = res.data?.data || res.data || null
+    // Backend trả về object với cấu trúc: { customer, order, products, subtotal, total }
+    order.value = res.data || null
     console.log('ORDER DETAIL (CLIENT):', order.value)
   } catch (err) {
     console.error(err)

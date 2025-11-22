@@ -103,23 +103,23 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
-import { useRouter, RouterLink } from "vue-router";
+import { ref, reactive } from "vue";//Dùng để tạo state bên trong component.
+import { useRouter, RouterLink } from "vue-router";//điều hướng sau khi đăng nhập
 import bgImg from "../../assets/anhnen1.jpeg";
-import { login } from "../../services/authService";
-import { useAuthStore } from "../../stores/auth";
+import { login } from "../../services/authService";//gọi api
+import { useAuthStore } from "../../stores/auth";//xử lý trạng thái đăng nhập
 
 const router = useRouter();
 const { setAuth, setStatus, setError } = useAuthStore();
 
 const email = ref("");
 const password = ref("");
-const remember = ref(false);
-const showPass = ref(false);
-const loading = ref(false);
-const errors = reactive({ email: "", password: "" });
-const doShake = ref(false);
-
+const remember = ref(false);//Checkbox "Ghi nhớ đăng nhập".
+const showPass = ref(false);//Hiển thị/ẩn mật khẩu.
+const loading = ref(false);//Disable nút đăng nhập + hiển thị spinner.
+const errors = reactive({ email: "", password: "" });//Object reactive chứa lỗi của từng field để show dưới input.
+const doShake = ref(false);//Trigger hiệu ứng lắc khi nhập sai.
+//Hàm tạo hiệu ứng lắc
 function triggerShake() {
   doShake.value = false;
   setTimeout(() => {
@@ -129,15 +129,16 @@ function triggerShake() {
 }
 
 async function handleLogin() {
+  //Reset lỗi, bật loading
   errors.email = "";
   errors.password = "";
   loading.value = true;
   setStatus("loading");
   setError(null);
-
+  //Bỏ khoảng trắng đầu/cuối email.
   const trimmedEmail = email.value.trim();
   const trimmedPassword = password.value;
-
+  //Nếu thiếu email/mật khẩu show lỗi/ lắc
   try {
     if (!trimmedEmail) errors.email = "Vui lòng nhật đầy đủ thông tin";
     if (!trimmedPassword) errors.password = "Vui lòng nhật đầy đủ thông tin";
@@ -146,11 +147,11 @@ async function handleLogin() {
       loading.value = false;
       return;
     }
-
+    //gửi yêu cầu api đăng nhập
     const response = await login({ email: trimmedEmail, password: trimmedPassword });
 
     if (!response?.token) throw new Error("Email hoặc mật khẩu không chính xác");
-
+    //Lấy userPayload
     const userPayload = response.user || {
       id: 0,
       name: trimmedEmail,
@@ -158,7 +159,7 @@ async function handleLogin() {
       role: response.role,
       roleId: response.user?.roleId
     };
-
+    //Lưu token, user vào store
     setAuth(response.token, userPayload);
     if (remember.value) localStorage.setItem("authRemember", "1");
     else localStorage.removeItem("authRemember");
@@ -184,10 +185,11 @@ async function handleLogin() {
       errorMsg.includes("incorrect") ||
       errorMsg.includes("không đúng") ||
       errorMsg.includes("sai")
-    ) {
+    ) {//Nếu message chứa "email", "user", "tài khoản" thông báo lỗi
       if (errorMsg.includes("email") || errorMsg.includes("user") || errorMsg.includes("tài khoản")) {
         errors.email = "Email không hợp lệ";
         errors.password = "";
+        //Nếu message chứa "password" hoặc "mật khẩu" thông báo lỗi
       } else if (errorMsg.includes("password") || errorMsg.includes("mật khẩu")) {
         errors.email = "Email hoặc mật khẩu không chính xác";
         errors.password = "Email hoặc mật khẩu không chính xác";
@@ -197,7 +199,7 @@ async function handleLogin() {
       }
       setError("Thông tin đăng nhập không chính xác");
       triggerShake();
-    } else {
+    } else {// lỗi sever, mạng
       setError(error?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
       triggerShake();
     }

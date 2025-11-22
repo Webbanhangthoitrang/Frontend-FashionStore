@@ -39,8 +39,11 @@
           <div class="divider"></div>
 
           <!-- GIÁ -->
-          <div class="price">
+          <div class="price" v-if="displayPrice > 0">
             <span class="price__cur">đ</span>{{ priceDigits }}
+          </div>
+          <div class="price" v-else>
+            <span style="color: #999; font-size: 20px;">Liên hệ</span>
           </div>
 
           <div v-if="colorOptions.length" class="group">

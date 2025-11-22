@@ -278,8 +278,13 @@
                       <input type="checkbox" class="pc-checkbox" />
                     </td>
                     <td class="pc-cell-name">
-                      {{ row.name }}
+                      {{
+                        row.color && row.size
+                          ? row.color + '/ ' + row.size
+                          : (row.color || row.size || 'Biến thể')
+                      }}
                     </td>
+
                     <td>
                       <div class="pc-price-input-wrap">
                         <input
@@ -392,7 +397,6 @@
     </main>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -420,7 +424,7 @@ const onFileChange = (e) => {
   imagePreview.value = URL.createObjectURL(file);
 };
 
-/* ========= ẢNH PHỤ (UI) ========= */
+/* ========= ẢNH PHỤ ========= */
 const extraInput = ref(null);
 const extraFiles = ref([]);
 const extraPreviews = ref([]);
@@ -448,35 +452,36 @@ const categories = ref([]);
 
 const fetchCategories = async () => {
   try {
-    const res = await request("/categories");
+    const res = await request("/categories", { method: "GET" });
     const data = res.data ?? res;
-    categories.value = Array.isArray(data) ? data : data.items || [];
+    categories.value = Array.isArray(data) ? data : data.data || data.items || [];
   } catch (err) {
     console.error("Lỗi load categories:", err);
   }
 };
 
-/* ========= BIẾN THỂ – giống ProductCreate ========= */
+/* ========= BIẾN THỂ ========= */
 let seed = 1;
 
+/** Form “Biến thể 1 / 2…” ở trên */
 const variantForms = ref([
   { id: 1, name: "", valuesText: "", values: [], saved: false },
 ]);
 
-const variants = ref([]); // các dòng đã trộn / từ API
+/** Các dòng trong bảng biến thể */
+const variants = ref([]); // { localId, id(backend), color, size, price, stock, imageUrl }
+const deletedVariantIds = ref([]);
 const filterVariant = ref("");
-const allCost = ref(null);
-const allSale = ref(null);
+const allCost = ref(null); // dùng cho “Giá vốn” – tạm để FE, backend có thể ignore
+const allSale = ref(null); // dùng cho “Giá bán” = price gửi lên backend
 
-/* Các form đã lưu */
 const savedVariantForms = computed(() =>
   variantForms.value.filter((v) => v.saved && v.values.length)
 );
 
-/* Nhãn cột đầu bảng (Màu/ Size,...) */
 const variantHeaderLabel = computed(() => {
   const saved = savedVariantForms.value;
-  if (!saved.length) return "Biến thể";
+  if (!saved.length) return "Màu / Size";
   if (saved.length === 1) return saved[0].name;
   return saved
     .slice(0, 2)
@@ -484,50 +489,63 @@ const variantHeaderLabel = computed(() => {
     .join("/ ");
 });
 
-/* TÁCH tên biến thể: "Trắng/ S" → ["Trắng","S"] */
-const splitVariantName = (name) => {
-  if (!name) return [""];
-  if (name.includes("/")) return name.split("/").map((s) => s.trim());
-  if (name.includes(",")) return name.split(",").map((s) => s.trim());
-  return [name.trim()];
+const makeKey = (color, size) => `${color || ""}__${size || ""}`;
+
+const formatVariantName = (row) => {
+  if (row.color && row.size) return `${row.color}/ ${row.size}`;
+  if (row.color) return row.color;
+  if (row.size) return row.size;
+  return "Biến thể";
 };
 
-/* DỰNG LẠI "Biến thể 1/2..." TỪ DANH SÁCH variants LẤY TỪ API */
-const initVariantFormsFromVariants = () => {
-  if (!variants.value.length) {
-    variantForms.value = [
-      { id: 1, name: "", valuesText: "", values: [], saved: false },
-    ];
-    return;
+/** Dựng form “Màu/Size” từ danh sách variants của backend */
+const initVariantFormsFromBackend = (backendVariants) => {
+  const colors = new Set();
+  const sizes = new Set();
+
+  backendVariants.forEach((v) => {
+    if (v.color) colors.add(v.color);
+    if (v.size) sizes.add(v.size);
+  });
+
+  const forms = [];
+
+  if (colors.size) {
+    const values = Array.from(colors);
+    forms.push({
+      id: 1,
+      name: "Màu",
+      valuesText: values.join(", "),
+      values,
+      saved: true, // đã có dữ liệu -> hiển thị chip giống lúc tạo
+    });
   }
 
-  const sampleParts = splitVariantName(variants.value[0].name);
-  const groupCount = sampleParts.length;
-
-  const groupValues = Array.from({ length: groupCount }, () => new Set());
-
-  variants.value.forEach((v) => {
-    const parts = splitVariantName(v.name);
-    parts.forEach((p, idx) => {
-      if (!p) return;
-      if (!groupValues[idx]) groupValues[idx] = new Set();
-      groupValues[idx].add(p);
+  if (sizes.size) {
+    const values = Array.from(sizes);
+    forms.push({
+      id: 2,
+      name: "Size",
+      valuesText: values.join(", "),
+      values,
+      saved: true,
     });
-  });
+  }
 
-  variantForms.value = groupValues.map((set, idx) => {
-    const valuesArr = Array.from(set);
-    return {
-      id: idx + 1,
-      name: `Biến thể ${idx + 1}`, // nếu muốn có "Màu/Size" bạn có thể cho sửa tay
-      valuesText: valuesArr.join(", "),
-      values: valuesArr,
-      saved: true, // đã lưu nên hiển thị dạng chip
-    };
-  });
+  if (!forms.length) {
+    forms.push({
+      id: 1,
+      name: "",
+      valuesText: "",
+      values: [],
+      saved: false,
+    });
+  }
+
+  variantForms.value = forms;
 };
 
-/* Dùng khi user chỉnh lại form & bấm Lưu biến thể → sinh lại bảng */
+/** Khi bấm “Lưu biến thể” → sinh lại bảng từ variantForms */
 const rebuildVariantRows = () => {
   const saved = savedVariantForms.value;
   if (!saved.length) {
@@ -535,33 +553,36 @@ const rebuildVariantRows = () => {
     return;
   }
 
-  const rows = [];
-  const first = saved[0];
-  const second = saved[1];
+  const oldMap = new Map();
+  variants.value.forEach((v) => {
+    const key = makeKey(v.color, v.size);
+    oldMap.set(key, v);
+  });
 
-  if (!second) {
-    first.values.forEach((v1) => {
+  const first = saved[0]; // nhóm 1 (giả định Màu)
+  const second = saved[1]; // nhóm 2 (giả định Size, có thể undefined)
+
+  const colors = first?.values || [];
+  const sizes = second?.values?.length ? second.values : [null];
+
+  const rows = [];
+
+  colors.forEach((color) => {
+    sizes.forEach((size) => {
+      const key = makeKey(color, size);
+      const existed = oldMap.get(key);
+
       rows.push({
-        id: seed++,
-        backendId: null,
-        name: v1,
-        costPrice: 0,
-        salePrice: 0,
+        localId: existed?.localId ?? seed++,
+        id: existed?.id ?? null,
+        color,
+        size,
+        price: existed?.price ?? 0,
+        stock: existed?.stock ?? 0,
+        imageUrl: existed?.imageUrl ?? null,
       });
     });
-  } else {
-    first.values.forEach((v1) => {
-      second.values.forEach((v2) => {
-        rows.push({
-          id: seed++,
-          backendId: null,
-          name: `${v1}/ ${v2}`,
-          costPrice: 0,
-          salePrice: 0,
-        });
-      });
-    });
-  }
+  });
 
   variants.value = rows;
 };
@@ -591,7 +612,6 @@ const saveVariantForm = (index) => {
   vForm.values = values;
   vForm.saved = true;
 
-  // Khi bấm Lưu biến thể → sinh lại bảng dựa trên group mới
   rebuildVariantRows();
 };
 
@@ -600,20 +620,21 @@ const removeVariantForm = (index) => {
   rebuildVariantRows();
 };
 
-/* Lọc bảng theo dropdown "Tất cả biến thể" */
-const filteredVariantRows = computed(() => {
-  if (!filterVariant.value) return variants.value;
-  const id = Number(filterVariant.value);
-  return variants.value.filter((v) => v.id === id);
-});
+/* Lọc bảng – tạm bỏ lọc theo id, chỉ trả lại toàn bộ */
+const filteredVariantRows = computed(() => variants.value);
 
-/* Xoá 1 dòng trong bảng */
-const removeVariantRow = (id) => {
-  variants.value = variants.value.filter((r) => r.id !== id);
+/* Xoá một dòng variant trong bảng */
+const removeVariantRow = (localId) => {
+  const row = variants.value.find((r) => r.localId === localId);
+  if (row?.id) {
+    deletedVariantIds.value.push(row.id);
+  }
+  variants.value = variants.value.filter((r) => r.localId !== localId);
 };
 
-/* Cài đặt giá chung */
+/* Cài giá chung cho tất cả */
 const applyAllCost = () => {
+  // chỉ set trên FE, backend hiện tại không có field costPrice/importPrice
   variants.value.forEach((r) => {
     r.costPrice = allCost.value || 0;
   });
@@ -621,86 +642,114 @@ const applyAllCost = () => {
 
 const applyAllSale = () => {
   variants.value.forEach((r) => {
-    r.salePrice = allSale.value || 0;
+    r.price = allSale.value || 0;
   });
 };
 
-/* ========= LOAD PRODUCT + VARIANTS TỪ BACKEND ========= */
-const saving = ref(false);
+/* ========= LOAD PRODUCT ========= */
+const loading = ref(false);
 
 const fetchProduct = async () => {
+  loading.value = true;
   try {
-    const res = await request(`/products/${productId}`);
-    const p = res.data ?? res;
+    const res = await request(`/products/${productId}`, { method: "GET" });
+    const apiData = res.data ?? res;
+    const p = apiData.data || apiData; // theo JSON bạn gửi
 
     form.value.name = p.name ?? "";
     form.value.description = p.description ?? "";
     form.value.categoryId = p.categoryId ?? p.category?.id ?? "";
 
-    const rawThumb =
-      p.thumbnail ||
-      p.image ||
+    const mainImage =
+      p.images?.find((img) => img.isPrimary)?.url ||
       p.imageUrl ||
-      (Array.isArray(p.images) && p.images[0]?.url) ||
+      p.thumbnail ||
       null;
 
-    if (rawThumb) {
-      imagePreview.value = /^https?:\/\//.test(rawThumb)
-        ? rawThumb
-        : `${API_BASE_URL}${rawThumb}`;
+    if (mainImage) {
+      imagePreview.value = /^https?:\/\//.test(mainImage)
+        ? mainImage
+        : `${API_BASE_URL}${mainImage}`;
     }
+
+    // Dựng variants từ backend
+    const backendVariants = Array.isArray(p.variants) ? p.variants : [];
+    variants.value = backendVariants.map((v) => ({
+      localId: seed++,
+      id: v.id,
+      color: v.color,
+      size: v.size,
+      price: v.price ?? 0,
+      stock: v.stock ?? 0,
+      imageUrl: v.imageUrl || null,
+    }));
+
+    // Dựng form “Màu/Size” phía trên
+    initVariantFormsFromBackend(backendVariants);
   } catch (err) {
     console.error("Lỗi load product:", err);
     alert(err?.message || "Không tải được thông tin sản phẩm.");
+  } finally {
+    loading.value = false;
   }
 };
 
-const fetchProductVariants = async () => {
-  try {
-    const res = await request(`/products/${productId}/variants`);
-    const data = res.data ?? res;
-    const list = Array.isArray(data) ? data : data.items || [];
+/* ========= LƯU LẠI ========= */
+const saving = ref(false);
 
-    variants.value = list.map((v) => ({
-      id: seed++,
-      backendId: v.id ?? v.variantId ?? null,
-      name: v.name || v.optionName || v.value || "Biến thể",
-      costPrice: Number(v.costPrice ?? v.importPrice ?? 0),
-      salePrice: Number(v.salePrice ?? v.price ?? 0),
-    }));
-
-    // ⭐ Dựng lại "Biến thể 1/2..." để phần trên có sẵn dữ liệu
-    initVariantFormsFromVariants();
-  } catch (err) {
-    console.error("Lỗi load variants:", err);
-  }
-};
-
-/* ========= SUBMIT ========= */
 const onSubmit = async () => {
   try {
     saving.value = true;
 
-    const payload = {
+    // 1. Cập nhật product cơ bản
+    const productPayload = {
       name: form.value.name,
       description: form.value.description,
       categoryId: form.value.categoryId || null,
-      variants: variants.value.map((v) => ({
-        id: v.backendId, // có backendId thì update, null thì tạo mới
-        name: v.name,
-        costPrice: v.costPrice,
-        salePrice: v.salePrice,
-      })),
-      // TODO: imageFile + extraFiles nếu backend hỗ trợ upload file
     };
 
     await request(`/products/${productId}`, {
       method: "PUT",
-      data: payload,
+      data: productPayload,
     });
 
+    // 2. Đồng bộ variants (update/create/delete)
+    for (const v of variants.value) {
+      const body = {
+        color: v.color || null,
+        size: v.size || null,
+        price: v.price ?? 0,
+        stock: v.stock ?? 0,
+        imageUrl: v.imageUrl,
+      };
+
+      if (v.id) {
+        // update
+        await request(`/products/${productId}/variants/${v.id}`, {
+          method: "PUT",
+          data: body,
+        });
+      } else {
+        // create mới
+        const createdRes = await request(`/products/${productId}/variants`, {
+          method: "POST",
+          data: body,
+        });
+        const createdData = createdRes.data ?? createdRes;
+        const createdVariant = createdData.data || createdData;
+        v.id = createdVariant.id ?? v.id;
+      }
+    }
+
+    // 3. Xoá những variant đã bị remove trong UI
+    for (const id of deletedVariantIds.value) {
+      await request(`/products/${productId}/variants/${id}`, {
+        method: "DELETE",
+      });
+    }
+
     alert("Cập nhật sản phẩm thành công!");
-    router.push({ name: "AdminProductManage" });
+    router.push("/admin/products");
   } catch (err) {
     console.error("Lỗi lưu product:", err);
     alert(err?.message || "Cập nhật sản phẩm thất bại.");
@@ -715,9 +764,10 @@ const goBack = () => {
 };
 
 onMounted(async () => {
-  await Promise.all([fetchCategories(), fetchProduct(), fetchProductVariants()]);
+  await Promise.all([fetchCategories(), fetchProduct()]);
 });
 </script>
+
 
 <style scoped>
 /* PAGE */

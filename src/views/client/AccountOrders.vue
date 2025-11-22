@@ -176,8 +176,9 @@ async function fetchOrders() {
 
     const res = await request(ORDERS_ENDPOINT, { method: "GET", params });
 
-    const list = res.data?.orders || res.data?.items || res.data || [];
-    orders.value = Array.isArray(list) ? list : [];
+    // Backend trả về array trực tiếp trong res.data
+    const list = Array.isArray(res.data) ? res.data : [];
+    orders.value = list;
   } catch (err) {
     errorMessage.value = err.message || "Không thể tải đơn hàng.";
     orders.value = [];
@@ -225,7 +226,7 @@ async function handleReviewSubmit(payload) {
     formData.append("comment", payload.comment || "");
 
 if (payload.images && payload.images.length > 0) {
-  formData.append("images", payload.images[0]); 
+  formData.append("reviewImage", payload.images[0]); 
 }
 
 

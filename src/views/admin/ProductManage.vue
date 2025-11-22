@@ -326,7 +326,7 @@ const handleAddToCategory = async (categoryIds) => {
         await request(`/categories/${categoryId}/products`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId }),
+          data: { productId },
         });
       }
     }

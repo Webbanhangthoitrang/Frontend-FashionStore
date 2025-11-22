@@ -213,9 +213,10 @@ const priceText = computed(() => formatVND(priceNumber.value));
   justify-content: center;
 }
 .thumb img {
-  width: 85%;
-  height: auto;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* Thân card */

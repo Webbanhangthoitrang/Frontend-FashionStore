@@ -21,7 +21,7 @@ async function createOrUpdateReview(productId, review) {
   // review = { rating: 5, text: "Sản phẩm rất tốt!" }
   const { data } = await request(`/products/${productId}/reviews`, {
     method: "POST",
-    body: review,
+    data: review,
     auth: true, // chỉ người dùng đăng nhập mới được đánh giá
   });
   return data;

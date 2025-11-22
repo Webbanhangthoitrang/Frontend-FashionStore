@@ -127,7 +127,20 @@ const formatMoney = (n) =>
 
 const loadOverview = async () => {
   const res = await request("/dashboard/overview");
-  overview.value = res.data;
+  const payload = res.data || {};
+
+  overview.value = {
+    revenue: Number(payload.totalRevenue ?? payload.revenue ?? 0),
+    profit: Number(payload.totalProfit ?? payload.profit ?? 0),
+    totalOrders: Number(payload.totalOrders ?? 0),
+    completedOrders: Number(payload.completedOrders ?? 0),
+    pendingOrders: Number(payload.pendingOrders ?? 0),
+    profitMargin: typeof payload.profitMargin === "string"
+      ? payload.profitMargin
+      : payload.profitMargin != null
+        ? `${Number(payload.profitMargin) * 100}%`
+        : null,
+  };
 };
 
 const loadRevenue = async () => {
@@ -139,18 +152,27 @@ const loadRevenue = async () => {
 const loadBestSelling = async () => {
   const res = await request("/dashboard/best-selling");
 
-  let list = res.data || [];
+  const rawList = Array.isArray(res.data) ? res.data : [];
 
-  // Sort giảm dần + lấy top 5
-  list = list
+  const normalized = rawList.map((item) => ({
+    name: item.name || item.productName || "Sản phẩm",
+    quantity: Number(item.quantity ?? item.value ?? 0),
+    revenue: Number(item.revenue ?? 0),
+    orderCount: Number(item.orderCount ?? 0),
+  }));
+
+  const sorted = normalized
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 5);
 
-  const maxQty = Math.max(...list.map((i) => i.quantity), 1);
+  const maxQty = sorted.length
+    ? Math.max(...sorted.map((i) => i.quantity), 0)
+    : 0;
+  const divisor = maxQty > 0 ? maxQty : 1;
 
-  bestSelling.value = list.map((i) => ({
+  bestSelling.value = sorted.map((i) => ({
     ...i,
-    percent: Math.round((i.quantity / maxQty) * 100),
+    percent: maxQty > 0 ? Math.round((i.quantity / divisor) * 100) : 0,
   }));
 };
 

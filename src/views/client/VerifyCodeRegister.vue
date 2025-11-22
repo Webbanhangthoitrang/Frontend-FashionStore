@@ -53,14 +53,14 @@ import { verifyRegisterOtp, resendRegisterOtp } from '../../services/authService
 
 const router = useRouter()
 
-// ===== State =====
+//  State 
 const email = ref('')
-const lastSignupPayload = ref(null)        // payload đầy đủ để resend
+const lastSignupPayload = ref(null)       
 const code = ref('')
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
-const cooldown = ref(0)
+const cooldown = ref(0)// Timer đếm ngược 60s khi resend OTP
 let tick = null
 
 // Chỉ giữ chữ số & giới hạn 6 ký tự
@@ -76,20 +76,20 @@ onMounted(() => {
   } catch {
     lastSignupPayload.value = null
   }
-
+  // nếu mất email chuyển về đăng kí
   if (!email.value) {
     router.replace({ name: 'register' })
   }
 })
 
 onUnmounted(() => clearInterval(tick))
-
+// hiển thị email dạng ẩn
 const maskedEmail = computed(() => {
   const [name, domain] = (email.value || '').split('@')
   if (!name || !domain) return email.value
   return name.slice(0, 2) + '***@' + domain
 })
-
+// hàm đếm ngược khitp
 function startCooldown(sec = 60) {
   cooldown.value = sec
   clearInterval(tick)
@@ -104,10 +104,10 @@ async function handleVerify() {
   success.value = ''
   loading.value = true
   try {
-    // BE yêu cầu 'otp' (không phải 'code')
+    
     const response = await verifyRegisterOtp({
       email: email.value,
-      otp: code.value,
+      code: code.value,
     })
 
     // Backend trả về token và user sau khi verify thành công
@@ -132,24 +132,24 @@ async function handleVerify() {
     loading.value = false
   }
 }
-
+// gửi lại otp
 async function handleResend() {
   error.value = ''
   success.value = ''
   loading.value = true
   try {
-    // Nếu BE dùng lại /auth/register để resend -> cần payload ĐẦY ĐỦ
+    
     let payloadForResend =
       lastSignupPayload.value && lastSignupPayload.value.email
         ? { ...lastSignupPayload.value }
         : null
 
     if (!payloadForResend) {
-      // Nếu không có payload đầy đủ thì báo lỗi rõ ràng
+      
       throw new Error('Thiếu thông tin đăng ký để gửi lại OTP. Hãy đăng ký lại.')
     }
 
-    // đảm bảo email khớp
+    
     payloadForResend.email = email.value
 
     await resendRegisterOtp(payloadForResend)

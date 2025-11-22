@@ -216,7 +216,13 @@
                     <td>
                       <input type="checkbox" class="pc-checkbox" />
                     </td>
-                    <td>{{ row.name }}</td>
+                    <td>
+                      {{
+                        row.color && row.size
+                          ? row.color + '/ ' + row.size
+                          : (row.color || row.size || 'Biến thể')
+                      }}
+                    </td>
                     <td>
                       <input
                         v-model.number="row.costPrice"
@@ -239,27 +245,7 @@
                         class="pc-trash-btn"
                         @click="removeVariantRow(row.id)"
                       >
-                        <svg
-                          viewBox="0 0 20 20"
-                          class="pc-trash-icon"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M5 6.5L5.5 14.5C5.5 15.6046 6.39543 16.5 7.5 16.5H12.5C13.6046 16.5 14.5 15.6046 14.5 14.5L15 6.5"
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                          />
-                          <path
-                            d="M4 5.5H16"
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                          />
-                          <path
-                            d="M8 4.5H12"
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                          />
-                        </svg>
+                        <!-- icon thùng rác -->
                       </button>
                     </td>
                   </tr>
@@ -321,24 +307,24 @@ import { request } from "../../services/http";
 
 const router = useRouter();
 
-/* ========= FORM ========= */
+/* ========= FORM SẢN PHẨM ========= */
 const form = ref({
   name: "",
   description: "",
   categoryId: "",
-  price: null, // 👈 BẮT BUỘC CHO BACKEND
+  price: null,
 });
 
 /* ========= ẢNH ========= */
 const imagePreview = ref("");
-const imageFile = ref(null); 
+const imageFile = ref(null);
+
 const onFileChange = (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  imageFile.value = file;                        
+  imageFile.value = file;
   imagePreview.value = URL.createObjectURL(file);
 };
-
 
 /* ========= DANH MỤC ========= */
 const categories = ref([]);
@@ -351,10 +337,12 @@ const fetchCategories = async () => {
 onMounted(fetchCategories);
 
 /* ========= BIẾN THỂ ========= */
+// Các nhóm biến thể: ví dụ [ {name: "Màu", values:["Đen","Trắng"]}, ... ]
 const variantForms = ref([
   { id: 1, name: "", valuesText: "", values: [], saved: false },
 ]);
 
+// Danh sách tổ hợp biến thể sau khi build
 const variants = ref([]);
 let seed = 1;
 
@@ -369,12 +357,10 @@ const variantHeaderLabel = computed(() => {
   const saved = savedVariantForms.value;
   if (!saved.length) return "Biến thể";
   if (saved.length === 1) return saved[0].name;
-  return saved
-    .slice(0, 2)
-    .map((v) => v.name)
-    .join("/ ");
+  return saved.slice(0, 2).map((v) => v.name).join(" / ");
 });
 
+/* ========= BUILD COMBO BIẾN THỂ ========= */
 const rebuildVariantRows = () => {
   const saved = savedVariantForms.value;
   const rows = [];
@@ -384,24 +370,26 @@ const rebuildVariantRows = () => {
     return;
   }
 
-  const first = saved[0];
-  const second = saved[1];
+  const first = saved[0];   // Màu
+  const second = saved[1];  // Size (nếu có)
 
   if (!second) {
-    first.values.forEach((v1) => {
+    first.values.forEach((color) => {
       rows.push({
         id: seed++,
-        name: v1,
+        color,
+        size: null,
         costPrice: 0,
         salePrice: 0,
       });
     });
   } else {
-    first.values.forEach((v1) => {
-      second.values.forEach((v2) => {
+    first.values.forEach((color) => {
+      second.values.forEach((size) => {
         rows.push({
           id: seed++,
-          name: `${v1}/ ${v2}`,
+          color,
+          size,
           costPrice: 0,
           salePrice: 0,
         });
@@ -414,7 +402,7 @@ const rebuildVariantRows = () => {
 
 const addVariantForm = () => {
   variantForms.value.push({
-    id: Date.now() + variantForms.value.length,
+    id: Date.now(),
     name: "",
     valuesText: "",
     values: [],
@@ -424,14 +412,21 @@ const addVariantForm = () => {
 
 const saveVariantForm = (index) => {
   const vForm = variantForms.value[index];
-  if (!vForm.name || !vForm.valuesText) return;
+
+  if (!vForm.name || !vForm.valuesText) {
+    alert("Tên biến thể và giá trị không được để trống.");
+    return;
+  }
 
   const values = vForm.valuesText
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
 
-  if (!values.length) return;
+  if (!values.length) {
+    alert("Giá trị biến thể không hợp lệ.");
+    return;
+  }
 
   vForm.values = values;
   vForm.saved = true;
@@ -449,33 +444,50 @@ const removeVariantRow = (id) => {
 };
 
 const applyAllCost = () => {
-  variants.value.forEach((r) => {
-    r.costPrice = allCost.value || 0;
-  });
+  variants.value.forEach((r) => (r.costPrice = allCost.value || 0));
 };
 
 const applyAllSale = () => {
-  variants.value.forEach((r) => {
-    r.salePrice = allSale.value || 0;
-  });
+  variants.value.forEach((r) => (r.salePrice = allSale.value || 0));
 };
+
+/* ========= UPLOAD ẢNH ========= */
 const uploadProductImage = async () => {
-  if (!imageFile.value) return null; // không bắt buộc phải có ảnh
+  if (!imageFile.value) return null;
 
   const formData = new FormData();
-  formData.append("file", imageFile.value);
+  formData.append("image", imageFile.value);
 
-
-  const res = await request("/uploads/product-image", {
+  const { data } = await request("/uploads/product-image", {
     method: "POST",
     data: formData,
-   
   });
 
- 
-  return res.url || res.data?.url;
+  return data?.url || null;
 };
 
+/* ========= TỰ ĐỘNG LƯU BIẾN THỂ ========= */
+const normalizeVariantFormsBeforeSubmit = () => {
+  if (variants.value.length) return;
+
+  variantForms.value.forEach((f) => {
+    if (f.name && f.valuesText && !f.saved) {
+      const values = f.valuesText
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+      if (values.length) {
+        f.values = values;
+        f.saved = true;
+      }
+    }
+  });
+
+  rebuildVariantRows();
+};
+
+/* ========= HANDLE CREATE ========= */
 const handleCreate = async () => {
   if (!form.value.name || !form.value.categoryId) {
     alert("Vui lòng nhập tên sản phẩm và chọn danh mục");
@@ -487,35 +499,48 @@ const handleCreate = async () => {
     return;
   }
 
-  // 1. Upload ảnh trước (nếu có chọn)
+  // Tự động build variants
+  normalizeVariantFormsBeforeSubmit();
+
+  // CHỈ lấy biến thể hợp lệ
+  const validVariantRows = variants.value.filter(
+    (v) => v.color || v.size
+  );
+
+  if (!validVariantRows.length) {
+    alert("Vui lòng tạo Màu / Size và bấm Lưu biến thể");
+    return;
+  }
+
+  // Upload ảnh
   let imageUrl = null;
   try {
-    imageUrl = await uploadProductImage(); // 👈 lấy url ảnh
-  } catch (e) {
-    console.error("Upload image error:", e);
+    imageUrl = await uploadProductImage();
+  } catch (err) {
     alert("Upload ảnh thất bại, vui lòng thử lại");
     return;
   }
 
-  // 2. Tạo payload
+  // Payload
   const payload = {
     name: form.value.name.trim(),
     description: form.value.description.trim(),
     categoryId: form.value.categoryId,
     price: form.value.price,
-    // nếu backend dùng imageUrl trong từng biến thể
-    variants: variants.value.map((v, idx) => ({
-      name: v.name,
-      costPrice: v.costPrice,
-      salePrice: v.salePrice,
-      imageUrl: idx === 0 ? imageUrl : v.imageUrl || null, // 👈 gắn ảnh cho biến thể đầu
+    variants: validVariantRows.map((v, idx) => ({
+      color: v.color,
+      size: v.size,
+      price: v.salePrice ?? form.value.price,
+      stock: 0,
+      imageUrl: imageUrl,
     })),
-    // nếu backend dùng bảng images riêng: dùng cái này thay cho trên
-    // images: imageUrl ? [{ url: imageUrl }] : [],
   };
+
+  if (imageUrl) payload.imageUrl = imageUrl;
 
   try {
     console.log("CREATE PRODUCT PAYLOAD:", payload);
+
     const res = await request("/products", {
       method: "POST",
       data: payload,
@@ -525,28 +550,14 @@ const handleCreate = async () => {
     alert("Tạo sản phẩm thành công!");
     router.push("/admin/products");
   } catch (err) {
-    console.error("CREATE PRODUCT ERROR:", err);
-    const apiData = err?.response?.data;
-    const msg =
-      apiData?.message || err.message || "Có lỗi xảy ra khi tạo sản phẩm!";
-    const errors = Array.isArray(apiData?.errors)
-      ? apiData.errors.map((e) => `${e.field}: ${e.message}`).join("\n")
-      : "";
-    alert(msg + (errors ? "\n\n" + errors : ""));
+    console.error(err);
+    alert("Có lỗi xảy ra khi tạo sản phẩm!");
   }
 };
 
-
-/* BACK */
-const goBack = () => {
-  try {
-    router.back();
-  } catch (e) {
-    console.warn("Không thể back router:", e);
-  }
-};
+/* ========= BACK ========= */
+const goBack = () => router.back();
 </script>
-
 
 <style scoped>
 /* PAGE & LAYOUT */

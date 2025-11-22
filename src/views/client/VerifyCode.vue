@@ -49,19 +49,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import {
-  verifyRegisterOtp,   
-  verifyResetOtp,      
-  resendRegisterOtp,   
-  resendResetOtp       
-} from '../../services/authService'
+import { useRouter } from 'vue-router'
+import { verifyResetOtp, resendResetOtp } from '../../services/authService'
 
 const router = useRouter()
-const route  = useRoute()
-
-// 'signup' | 'reset'
-const flow = ref(String(route.query.flow || 'signup').toLowerCase())
 
 const email    = ref('')
 const code     = ref('')
@@ -72,33 +63,27 @@ const cooldown = ref(0)
 let tick = null
 
 onMounted(() => {
-  // Lấy email theo flow
-  if (flow.value === 'signup') {
-    email.value = sessionStorage.getItem('signup_email') || ''
-  } else {
-    flow.value  = 'reset'
-    email.value = sessionStorage.getItem('reset_email') || ''
-  }
-  // Không có email -> quay về màn đầu vào của flow
+  // Lấy email từ bước quên mật khẩu
+  email.value = sessionStorage.getItem('reset_email') || ''
+
+  // Không có email thì quay về bước nhập email
   if (!email.value) {
-    router.replace({ name: flow.value === 'signup' ? 'register' : 'ForgotPassword' })
+    router.replace({ name: 'ForgotPassword' })
   }
 })
 
-const pageTitle = computed(() => flow.value === 'signup' ? 'Xác minh email' : 'Quên mật khẩu')
-
+const pageTitle = computed(() => 'Quên mật khẩu')
+// ẩn email
 const maskedEmail = computed(() => {
   const [name, domain] = (email.value || '').split('@')
-  if (!name || !domain) return email.value || ''
+  if (!name || !domain) return email.value
   return name.slice(0, 2) + '***@' + domain
 })
-
+// nội dung mô tả
 const hintText = computed(() =>
-  flow.value === 'signup'
-    ? `Nhập mã OTP đã gửi tới ${maskedEmail.value} để xác minh tài khoản.`
-    : `Kiểm tra ${maskedEmail.value} và nhập mã xác nhận để đặt lại mật khẩu.`
+  `Kiểm tra ${maskedEmail.value} và nhập mã xác nhận để đặt lại mật khẩu.`
 )
-
+// Đếm ngược gửi lại OTP
 function startCooldown(sec = 60) {
   cooldown.value = sec
   clearInterval(tick)
@@ -109,39 +94,32 @@ function startCooldown(sec = 60) {
 }
 
 async function handleVerify() {
+  // xóa thông báo cũ
   error.value = ''
   success.value = ''
   loading.value = true
+
   try {
-    if (flow.value === 'signup') {
-      // ✅ verify OTP đăng ký
-      await verifyRegisterOtp({
-        email: email.value,
-        code : code.value,
-        // verificationId: sessionStorage.getItem('signup_verification_id') || undefined,
-      })
+    const res = await verifyResetOtp({
+      email: email.value,
+      otp : code.value,
+    })
 
-      // dọn session & chuyển login
-      sessionStorage.removeItem('signup_email')
-      sessionStorage.removeItem('signup_verification_id')
-      success.value = 'Xác minh thành công!'
-      setTimeout(() => {
-        router.replace({ name: 'login', query: { email: email.value, verified: '1' } })
-      }, 600)
-    } else {
-      // ✅ verify OTP reset
-      const res = await verifyResetOtp({
-        email: email.value,
-        code : code.value,
-      })
-      const resetToken = res?.data?.resetToken || res?.resetToken
-      if (resetToken) sessionStorage.setItem('reset_token', resetToken)
+    // lấy token cho bước đặt lại mật khẩu
+    const resetToken = res?.data?.resetToken || res?.resetToken
+    if (resetToken) sessionStorage.setItem('reset_token', resetToken)
 
-      // bật cờ cho guard ResetPassword
-      sessionStorage.setItem('reset_verified', '1')
-      success.value = 'Mã hợp lệ. Vui lòng đặt mật khẩu mới.'
-      setTimeout(() => router.replace({ name: 'ResetPassword' }), 600)
-    }
+    // gắn cờ cho guard ResetPassword
+    sessionStorage.setItem('reset_verified', '1')
+
+    success.value = 'Mã hợp lệ. Vui lòng đặt mật khẩu mới.'
+     setTimeout(() => {
+  router.replace({ 
+    name: 'reset-password',     
+    query: { flow: 'reset' }  
+  })
+}, 600)
+
   } catch (e) {
     error.value = e?.message || 'Mã OTP không đúng hoặc đã hết hạn.'
   } finally {
@@ -154,13 +132,8 @@ async function handleResend() {
   success.value = ''
   loading.value = true
   try {
-    if (flow.value === 'signup') {
-      // ✅ gửi lại OTP cho đăng ký
-      await resendRegisterOtp({ email: email.value })
-    } else {
-      // ✅ gửi lại OTP cho reset (forgot-password)
-      await resendResetOtp({ email: email.value })
-    }
+    await resendResetOtp({ email: email.value })
+
     success.value = 'Đã gửi lại mã. Vui lòng kiểm tra email.'
     startCooldown(60)
   } catch (e) {

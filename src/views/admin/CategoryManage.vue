@@ -248,7 +248,7 @@ async function removeProducts(productIds) {
     await request(`/categories/${catId}/products/remove`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productIds }),
+      data: { productIds },
     })
 
     alert(
@@ -291,42 +291,9 @@ async function handleAddProducts(productIds) {
       await request(`/categories/${catId}/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
+        data: { productId },
       });
     }
-    async function removeProducts(productIds) {
-  if (!currentCategory.value || !productIds.length) {
-    openRemovePopup.value = false
-    return
-  }
-
-  try {
-    loading.value = true
-    const catId = currentCategory.value.id
-
-    // ⚠️ ĐOÁN ENDPOINT: DELETE /categories/{categoryId}/products/{productId}
-    for (const productId of productIds) {
-      await request(`/categories/${catId}/products/${productId}`, {
-        method: "DELETE",
-      })
-    }
-
-    alert(
-      `Đã xoá ${productIds.length} sản phẩm khỏi danh mục "${currentCategory.value.name}".`
-    )
-
-    await fetchCategories() // cập nhật lại tổng sản phẩm
-  } catch (err) {
-    console.error(err)
-    alert("Xoá sản phẩm khỏi danh mục thất bại.")
-  } finally {
-    loading.value = false
-    openRemovePopup.value = false
-  }
-}
-
-
-
     alert(
       `Đã thêm ${productIds.length} sản phẩm vào danh mục "${currentCategory.value.name}".`
     );
