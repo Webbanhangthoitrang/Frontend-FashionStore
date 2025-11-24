@@ -1,7 +1,7 @@
 // src/services/reviewService.js
 import { request } from "./http";
 
-// ✅ Lấy danh sách đánh giá sản phẩm
+//  Lấy danh sách đánh giá sản phẩm
 async function getReviewsByProductId(productId, params = {}) {
   // backend nên hỗ trợ phân trang: ?page=1&limit=3
   const { data } = await request(`/products/${productId}/reviews`, {
@@ -16,7 +16,7 @@ async function getReviewsByProductId(productId, params = {}) {
   };
 }
 
-// ✅ Thêm hoặc cập nhật đánh giá
+//  Thêm hoặc cập nhật đánh giá
 async function createOrUpdateReview(productId, review) {
   // review = { rating: 5, text: "Sản phẩm rất tốt!" }
   const { data } = await request(`/products/${productId}/reviews`, {
@@ -27,7 +27,7 @@ async function createOrUpdateReview(productId, review) {
   return data;
 }
 
-// ✅ Xoá đánh giá
+//  Xoá đánh giá
 async function deleteReview(productId, reviewId) {
   const { data } = await request(`/products/${productId}/reviews/${reviewId}`, {
     method: "DELETE",

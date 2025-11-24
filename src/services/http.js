@@ -1,9 +1,6 @@
 // src/services/http.js
 import { getAuthToken } from "../stores/auth";
 
-/* ==========================
-   Cấu hình mặc định
-========================== */
 const DEFAULT_HEADERS = {
   "ngrok-skip-browser-warning": "true", // bỏ cảnh báo DevTunnel
 };

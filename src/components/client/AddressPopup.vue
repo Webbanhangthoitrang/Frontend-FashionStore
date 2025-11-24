@@ -119,7 +119,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { createAddress } from '../../services/addressService'
 import { request } from '../../services/http'
 
-// ====== Form data ======
+//  Form data 
 const form = ref({
   fullName: '',
   phone: '',
@@ -142,7 +142,7 @@ const selectedProvinceCode = ref('')
 const selectedDistrictCode = ref('')
 const selectedWardCode = ref('')
 
-// ====== Tải danh sách tỉnh ======
+//  Tải danh sách tỉnh 
 async function loadProvinces() {
   try {
     const res = await request('/locations/provinces', { method: 'GET' })
@@ -157,7 +157,7 @@ async function loadProvinces() {
   }
 }
 
-// ====== Khi chọn tỉnh ======
+//  Khi chọn tỉnh 
 async function onProvinceChange() {
   const p = provinces.value.find(p => p.name === form.value.province)
   selectedProvinceCode.value = p?.code || ''
@@ -184,7 +184,7 @@ async function onProvinceChange() {
   }
 }
 
-// ====== Khi chọn huyện ======
+//  Khi chọn huyện 
 async function onDistrictChange() {
   const d = districts.value.find(d => d.name === form.value.district)
   selectedDistrictCode.value = d?.code || ''
@@ -208,26 +208,26 @@ async function onDistrictChange() {
   }
 }
 
-// ====== Khi chọn phường ======
+//  Khi chọn phường 
 function onWardChange() {
   const w = wards.value.find(w => w.name === form.value.ward)
   selectedWardCode.value = w?.code || ''
 }
 
-// ====== Popup toggle ======
+//  Popup toggle 
 const toggleRegion = ref(false)
 const regionLabel = computed(() => {
   const { province, district, ward } = form.value
   return [province, district, ward].filter(Boolean).join(', ')
 })
 
-// ====== Đóng popup ======
+//  Đóng popup 
 const emit = defineEmits(['close', 'updated'])
 function onClose() {
   emit('close')
 }
 
-// ====== Validate ======
+//  Validate 
 const canSubmit = computed(() => {
   const f = form.value
   return (
@@ -321,7 +321,7 @@ async function onSubmit() {
   }
 }
 
-// ====== ESC để đóng ======
+// ESC để đóng 
 function handleKeydown(e) {
   if (e.key === 'Escape') onClose()
 }
@@ -336,7 +336,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ==== Overlay + Modal ==== */
+/*  Overlay + Modal  */
 .overlay{
   position: fixed;
   inset: 0;
@@ -387,7 +387,7 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-/* ==== Form ==== */
+/*  Form  */
 .grid-2{
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -497,8 +497,5 @@ onUnmounted(() => {
   margin-top: 6px;
 }
 
-/* Responsive */
-@media (max-width: 640px){
-  .grid-2{ grid-template-columns: 1fr; }
-}
+
 </style>

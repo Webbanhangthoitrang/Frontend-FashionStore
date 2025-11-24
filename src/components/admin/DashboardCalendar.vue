@@ -106,7 +106,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'apply', 'cancel'])
 
-/* ===== DATE CƠ BẢN ===== */
+/*  DATE CƠ BẢN  */
 const today = new Date()
 const baseMonth = ref(today.getMonth()) // tháng bên trái
 const baseYear = ref(today.getFullYear())

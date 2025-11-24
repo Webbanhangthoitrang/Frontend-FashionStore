@@ -115,7 +115,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { request, API_BASE_URL } from '../../services/http'
-import ConfirmRemoveFromCategory from './ConfirmRemoveFromCategory.vue'  // ✅ Sửa path
+import ConfirmRemoveFromCategory from './ConfirmRemoveFromCategory.vue'  //  Sửa path
 
 /* PROPS & EMITS */
 const props = defineProps({
@@ -378,7 +378,7 @@ const handleClose = () => {
   color: #b91c1c;
 }
 
-/* ===== ROW ITEM (border full width) ===== */
+/*  ROW ITEM (border full width)  */
 .row {
   width: 100%;
   border-bottom: 1px solid #999999;
@@ -399,7 +399,7 @@ const handleClose = () => {
   background: #ffffff;
 }
 
-/* ===== CHECKBOX ===== */
+/*  CHECKBOX  */
 /* Checkbox trong list sản phẩm của popup (giống ProductManage.vue) */
 .row-check {
   -webkit-appearance: none;
@@ -422,7 +422,7 @@ const handleClose = () => {
 }
 
 
-/* ===== THUMBNAIL ===== */
+/*  THUMBNAIL  */
 .row__thumb {
   width: 76px;
   height: 76px;
@@ -440,7 +440,7 @@ const handleClose = () => {
   object-fit: cover;
 }
 
-/* ===== INFO (NAME + BADGE) ===== */
+/*  INFO (NAME + BADGE)  */
 .row__info {
   display: flex;
   align-items: center;
@@ -453,7 +453,6 @@ const handleClose = () => {
   color: #111827;
 }
 
-/* badge Inactive giống Figma */
 .badge {
   padding: 4px 12px;
   border-radius: 999px;
@@ -464,7 +463,7 @@ const handleClose = () => {
   color: #ff4e6a;
 }
 
-/* ===== PRICE ===== */
+/*  PRICE  */
 .row__price {
   font-size: 14px;
   font-weight: 500;
@@ -475,7 +474,7 @@ const handleClose = () => {
 
 
 
-/* ===== FOOTER ===== */
+/*  FOOTER  */
 .modal__footer {
   padding: 16px 30px 24px;
   border-top: 1px solid #e5e7eb;
@@ -487,7 +486,7 @@ const handleClose = () => {
 .footer-inner {
   display: flex;
   align-items: center;
-  gap: 600px;       /* khoảng cách giữa checkbox và nút */
+  gap: 600px;      
 }
 
 
@@ -513,7 +512,7 @@ const handleClose = () => {
   border-color: #4C80E6;
 }
 
-/* ===== BUTTON ===== */
+/*  BUTTON  */
 
 
 .btn--danger {

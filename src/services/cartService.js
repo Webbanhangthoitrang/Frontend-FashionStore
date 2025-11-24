@@ -89,7 +89,7 @@ export async function addItem(productVariantId, quantity = 1) {
 
   await request("/cart", {
     method: "POST",
-    data: { productVariantId: pid, quantity: qty }, // ✅ đổi sang data
+    data: { productVariantId: pid, quantity: qty }, //  đổi sang data
   });
 
   await fetchCart();
@@ -100,7 +100,7 @@ export async function updateItem(itemId, quantity) {
   const qty = Math.max(1, Number.parseInt(quantity, 10) || 1);
   await request(`/cart/${itemId}`, {
     method: "PUT",
-    data: { quantity: qty }, // ✅ đổi sang data
+    data: { quantity: qty }, //  đổi sang data
   });
 
   const it = cartState.items.find((i) => i.id === itemId);

@@ -81,12 +81,5 @@
   opacity: 0.8;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .footer-container {
-    flex-direction: column;
-    gap: 24px;
-    text-align: center;
-  }
-}
+
 </style>

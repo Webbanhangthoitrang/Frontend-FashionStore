@@ -177,7 +177,6 @@ const routes = [
 
   // ----- ADMIN -----
 
-  // vào /admin tự redirect sang dashboard
   {
     path: '/admin',
     redirect: '/admin/dashboard',

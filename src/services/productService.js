@@ -82,7 +82,7 @@ function normalizeProductSummary(p = {}) {
   };
 }
 
-/* ✅ Normalizer cho trang chi tiết */
+/*  Normalizer cho trang chi tiết */
 function normalizeProductDetail(p = {}) {
   const base = normalizeProductSummary(p);
 
@@ -197,7 +197,7 @@ export async function getAllProducts({ page = 1, pageSize = 12, q } = {}) {
   };
 }
 
-/** ✅ GET /products/:id -> chi tiết đầy đủ cho ProductDetail */
+/**  GET /products/:id -> chi tiết đầy đủ cho ProductDetail */
 export async function getProductById(id) {
   if (!id) throw new Error("Thiếu id sản phẩm");
 
@@ -210,7 +210,7 @@ export async function getProductById(id) {
   return normalizeProductDetail(item);
 }
 
-// ✅ Alias export để backward compatible
+//  Alias export để backward compatible
 export const getProducts = getAllProducts;
 
 export { normalizeProductSummary };

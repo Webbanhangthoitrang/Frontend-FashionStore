@@ -228,7 +228,7 @@ const handleSubmit = () => {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #ff4d4f; /* màu đỏ giống nút hủy */
+  background: #ff4d4f; 
 }
 
 .reason-text {
@@ -305,7 +305,7 @@ const handleSubmit = () => {
 }
 
 .btn--primary {
-  background: #ff4d4f; /* đỏ giống nút HỦY ĐƠN HÀNG */
+  background: #ff4d4f; 
   color: #ffffff;
 }
 

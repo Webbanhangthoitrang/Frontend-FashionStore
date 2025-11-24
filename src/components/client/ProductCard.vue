@@ -1,5 +1,4 @@
 <template>
-  <!-- Có id: dùng RouterLink điều hướng theo name + params -->
   <RouterLink
     v-if="hasId"
     class="card"
@@ -34,7 +33,6 @@
     </div>
   </RouterLink>
 
-  <!-- Không có id: hiển thị card tĩnh (không điều hướng) -->
   <div v-else class="card card--disabled" role="article" aria-disabled="true" tabindex="-1">
     <div class="thumb">
       <img :src="imageSrc" :alt="title" data-pin-nopin="true" />
@@ -65,12 +63,10 @@
 import { computed } from "vue";
 import fallbackAsset from "../../assets/image1.png";
 
-/* ---------------- Props ---------------- */
 const props = defineProps({
   product: { type: Object, required: true },
 });
 
-/* ---------------- Helpers ---------------- */
 const toNumberSafe = (v) => {
   const n = Number(String(v ?? 0).replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : 0;

@@ -107,7 +107,7 @@ const handleConfirm = () => {
 /* ACTIONS */
 .addr-actions {
   display: flex;
-  justify-content: center; /* cho giống figma: 2 nút giữa popup */
+  justify-content: center; 
   gap: 24px;
 }
 

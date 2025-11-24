@@ -258,16 +258,5 @@ function logout() {
   text-decoration: underline;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .header__container {
-    gap: 12px;
-  }
-  .header__logo {
-    height: 42px;
-  }
-  .menu__list {
-    gap: 16px;
-  }
-}
+
 </style>

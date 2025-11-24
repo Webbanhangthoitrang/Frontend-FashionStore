@@ -190,7 +190,7 @@ const fetchUsers = async () => {
       auth: true,
     });
 
-    console.log("📦 /users response:", res);
+    console.log(" /users response:", res);
 
     let list = [];
 
@@ -205,9 +205,9 @@ const fetchUsers = async () => {
     }
 
     users.value = list;
-    console.log("✅ users.value:", users.value);
+    console.log(" users.value:", users.value);
   } catch (err) {
-    console.error("❌ Lỗi tải người dùng:", err);
+    console.error(" Lỗi tải người dùng:", err);
     errorMessage.value =
       err.message ||
       "Không tải được danh sách người dùng. Vui lòng thử lại.";
@@ -317,7 +317,7 @@ const onToggleStatus = async (user) => {
       user.status = newActive ? 1 : 0;
     }
   } catch (err) {
-    console.error("❌ Lỗi đổi trạng thái:", err);
+    console.error(" Lỗi đổi trạng thái:", err);
     alert(err.message || "Không thể đổi trạng thái người dùng.");
   }
 };
