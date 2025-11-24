@@ -5,7 +5,7 @@
     <CartHeader />
 
     <main class="cart-container">
-      <!-- === Page head === -->
+      <!--  Page head  -->
       <header class="page-head" aria-label="Tiêu đề trang giỏ hàng">
         <div class="page-title-wrap">
           <span class="bag-icon" aria-hidden="true">
@@ -35,7 +35,7 @@
         </div>
       </header>
 
-      <!-- === Bảng sản phẩm === -->
+      <!-- Bảng sản phẩm -->
       <section class="cart-table">
         <div class="cart-table__head">
           <label class="chk">
@@ -112,7 +112,7 @@
         </div>
       </section>
 
-      <!-- === Footer === -->
+      <!--  Footer  -->
       <footer class="cart-footer">
         <label class="chk">
           <input
@@ -151,7 +151,7 @@
         </button>
       </footer>
 
-      <!-- === Popup xác nhận xóa === -->
+      <!--  Popup xác nhận xóa  -->
       <div v-if="confirm.show" class="modal-overlay" @keydown.esc.prevent="closeConfirm" tabindex="0">
         <div class="modal-box" role="dialog" aria-modal="true">
           <h3 class="modal-title">
@@ -180,7 +180,7 @@ const router = useRouter();
 const search = ref("");
 const selectedIds = reactive(new Set());
 
-// ===== Helpers =====
+//  Helpers 
 const vnd = (n) => `${(Number(n) || 0).toLocaleString("vi-VN")}đ`;
 
 // Items & filter
@@ -211,7 +211,7 @@ function getItemImage(it) {
   );
 }
 
-// ===== Selection logic =====
+//  Selection logic 
 const selectedCount = computed(() => {
   const list = Array.isArray(filteredItems.value) ? filteredItems.value : [];
   return list.reduce((c, i) => (selectedIds.has(i?.id) ? c + 1 : c), 0);
@@ -245,7 +245,7 @@ function toggleSelectAll(e) {
 }
 function onToggleItem(id, e) { e.target.checked ? selectedIds.add(id) : selectedIds.delete(id); }
 
-// ===== Qty / Remove =====
+//  Qty / Remove 
 function increase(item) { inc(item.id); }
 function decrease(item) { dec(item.id); }
 function updateQty(item, e) {
@@ -253,7 +253,7 @@ function updateQty(item, e) {
   setQty(item.id, isNaN(n) ? 1 : n);
 }
 
-// ===== Xóa (popup confirm) =====
+//  Xóa (popup confirm) 
 const confirm = reactive({
   show: false,
   mode: "one",     // 'one' | 'multi'
@@ -291,7 +291,7 @@ async function doConfirm() {
   }
 }
 
-// ===== Mua hàng -> Checkout =====
+//  Mua hàng -> Checkout 
 function goCheckout() {
   // Nếu backend xử lý cả giỏ: chỉ cần điều hướng
   // Nếu muốn truyền danh sách item đã chọn: đưa id vào query `selected`

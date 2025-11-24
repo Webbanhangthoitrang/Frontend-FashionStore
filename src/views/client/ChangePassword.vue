@@ -207,13 +207,5 @@ async function onSubmit () {
 .form__error { background:#fee2e2; color:#991b1b; padding:10px 12px; border-radius:8px; margin-bottom:12px; font-size:14px; }
 .form__success { background:#dcfce7; color:#166534; padding:10px 12px; border-radius:8px; margin-bottom:12px; font-size:14px; }
 
-/* Responsive */
-@media (max-width: 992px) {
-  .grid { grid-template-columns:1fr; }
-  .form { width:100%; }
-}
-@media (max-width: 640px) {
-  .form__row { grid-template-columns:1fr; }
-  .form__label { margin-bottom:4px; }
-}
+
 </style>

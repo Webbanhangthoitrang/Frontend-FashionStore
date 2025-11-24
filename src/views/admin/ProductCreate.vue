@@ -224,6 +224,7 @@
                     <th>{{ variantHeaderLabel }}</th>
                     <th>Giá vốn</th>
                     <th>Giá bán</th>
+                    <th>Số lượng</th>
                     <th class="pc-col-trash"></th>
                   </tr>
                 </thead>
@@ -254,6 +255,15 @@
                         type="number"
                         min="0"
                         class="pc-input pc-input-sm"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        v-model.number="row.stock"
+                        type="number"
+                        min="0"
+                        class="pc-input pc-input-sm"
+                        placeholder="0"
                       />
                     </td>
                     <td>
@@ -289,12 +299,22 @@
                         @input="applyAllSale"
                       />
                     </td>
+                    <td>
+                      <input
+                        v-model.number="allStock"
+                        type="number"
+                        min="0"
+                        class="pc-input pc-input-sm"
+                        @input="applyAllStock"
+                        placeholder="0"
+                      />
+                    </td>
                     <td></td>
                   </tr>
 
                   <!-- EMPTY -->
                   <tr v-if="!variants.length">
-                    <td colspan="5" class="pc-empty-cell">
+                    <td colspan="6" class="pc-empty-cell">
                       <div class="pc-empty-inner">
                         <p>Tạo biến thể của bạn</p>
                       </div>
@@ -401,6 +421,7 @@ let seed = 1;
 
 const allCost = ref(null);
 const allSale = ref(null);
+const allStock = ref(null);
 
 const savedVariantForms = computed(() =>
   variantForms.value.filter((v) => v.saved && v.values.length)
@@ -434,6 +455,7 @@ const rebuildVariantRows = () => {
         size: null,
         costPrice: 0,
         salePrice: 0,
+        stock: 0,
       });
     });
   } else {
@@ -445,6 +467,7 @@ const rebuildVariantRows = () => {
           size,
           costPrice: 0,
           salePrice: 0,
+          stock: 0,
         });
       });
     });
@@ -504,6 +527,10 @@ const applyAllSale = () => {
   variants.value.forEach((r) => (r.salePrice = allSale.value || 0));
 };
 
+const applyAllStock = () => {
+  variants.value.forEach((r) => (r.stock = allStock.value || 0));
+};
+
 /* ========= TỰ ĐỘNG LƯU BIẾN THỂ ========= */
 const normalizeVariantFormsBeforeSubmit = () => {
   if (variants.value.length) return;
@@ -550,6 +577,22 @@ const handleCreate = async () => {
     return;
   }
 
+  // Kiểm tra xem có biến thể nào có giá hợp lệ không
+  const hasValidPrice = validVariantRows.some((v) => {
+    const price = v.salePrice ?? v.price ?? form.value.price;
+    return price && price > 0;
+  });
+
+  if (!hasValidPrice) {
+    alert("Vui lòng nhập giá cho ít nhất một biến thể hoặc sử dụng 'Cài đặt giá cho tất cả'");
+    return;
+  }
+
+  if (!imageFiles.value.length) {
+    alert("Vui lòng tải lên ít nhất một ảnh sản phẩm");
+    return;
+  }
+
   // Chuẩn bị FormData (multipart/form-data)
   const formData = new FormData();
   formData.append("name", form.value.name.trim());
@@ -559,12 +602,17 @@ const handleCreate = async () => {
   // stock tổng có thể để 0, backend sẽ dùng từng biến thể
   formData.append("stock", "0");
 
-  const variantsPayload = validVariantRows.map((v) => ({
-    color: v.color,
-    size: v.size,
-    price: v.salePrice ?? form.value.price,
-    stock: 0,
-  }));
+  const variantsPayload = validVariantRows.map((v) => {
+    const variantPrice = v.salePrice ?? v.price ?? form.value.price;
+    const variantStock = v.stock ?? 0;
+    
+    return {
+      color: v.color || null,
+      size: v.size || null,
+      price: Number(variantPrice) || 0,
+      stock: Number(variantStock) || 0,
+    };
+  });
 
   formData.append("variants", JSON.stringify(variantsPayload));
 
@@ -587,7 +635,7 @@ const handleCreate = async () => {
     router.push("/admin/products");
   } catch (err) {
     console.error(err);
-    alert("Có lỗi xảy ra khi tạo sản phẩm!");
+    alert(err?.message || "Có lỗi xảy ra khi tạo sản phẩm!");
   }
 };
 

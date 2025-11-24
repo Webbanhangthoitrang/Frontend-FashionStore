@@ -261,17 +261,13 @@ async function loadProfile() {
   }
 }
 
-/* ============================================
-   CHỈ CHO NHẬP SỐ 0–9 CHO SĐT
-============================================ */
+/*  CHỈ CHO NHẬP SỐ 0–9 CHO SĐT*/
 function handlePhoneInput(e) {
   const raw = e.target.value || ''
   form.phone = raw.replace(/[^0-9]/g, '')
 }
 
-/* ============================================
-   VALIDATE NGÀY SINH – dd/mm/yyyy
-============================================ */
+/* VALIDATE NGÀY SINH – dd/mm/yyyy */
 function isValidDob(dobStr) {
   const match = dobStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
   if (!match) return false
@@ -297,9 +293,7 @@ function dobToISO(dobStr) {
   return `${m[3]}-${m[2]}-${m[1]}`
 }
 
-/* ============================================
-   SUBMIT FORM
-============================================ */
+/*SUBMIT FORM */
 async function onSubmit() {
   errorMessage.value = ''
   successMessage.value = ''
@@ -394,9 +388,7 @@ async function onSubmit() {
   }
 }
 
-/* ============================================
-   XỬ LÝ CHỌN AVATAR
-============================================ */
+/* XỬ LÝ CHỌN AVATAR*/
 function onFileChange(e) {
   const file = e.target.files?.[0]
   if (!file) return
@@ -446,7 +438,7 @@ onMounted(() => {
   gap: 24px;
 }
 
-/* ===== Card phải ===== */
+/*  Card phải  */
 .card {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -473,7 +465,7 @@ onMounted(() => {
   padding: 18px 22px 22px;
 }
 
-/* ===== Form ===== */
+/*  Form  */
 .form {
   max-width: 640px;
 }
@@ -566,7 +558,7 @@ onMounted(() => {
   font-size: 14px;
 }
 
-/* ===== Uploader ===== */
+/*  Uploader  */
 .uploader {
   display: grid;
   grid-auto-rows: max-content;

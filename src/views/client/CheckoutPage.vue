@@ -4,7 +4,7 @@
     <ClientHeader />
 
     <main class="container">
-      <!-- ===== ĐỊA CHỈ GIAO HÀNG ===== -->
+      <!--  ĐỊA CHỈ GIAO HÀNG  -->
       <section class="card address">
         <div class="address__head">
           <div class="head-left">
@@ -54,7 +54,7 @@
         </div>
       </section>
 
-      <!-- ===== SẢN PHẨM / ĐẶT HÀNG ===== -->
+      <!--  SẢN PHẨM / ĐẶT HÀNG  -->
       <section class="card order">
         <div class="order__head">
           <h3>Sản phẩm</h3>
@@ -345,10 +345,8 @@ async function placeOrder () {
         quantity: Number(i.quantity),    // số
         price: Number(i.price)           // số
       }
-      // nếu có biến thể thì gửi kèm (BE nào dùng variantId / productVariantId)
+
       if (i.variantId) x.variantId = i.variantId
-      // nếu BE của bạn dùng tên khác:
-      // if (i.variantId) x.productVariantId = i.variantId
       return x
     })
 
@@ -386,12 +384,11 @@ async function placeOrder () {
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Khula:wght@400;600;700&display=swap");
 
-/* ... giữ nguyên toàn bộ CSS của bạn ... */
+
 .checkout { 
   background : #f7f7f7; 
   font-family : "Khula", sans-serif; 
 }
-/* (phần CSS dưới mình giữ nguyên như bạn gửi) */
 .container { max-width:980px; margin:20px auto 40px; padding:0 16px }
 .card { background:#fff; border:1px solid #e6e8ee; border-radius:10px; box-shadow:0 1px 0 rgba(16,24,40,.02); padding:16px; margin-bottom:16px }
 .address__head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px }

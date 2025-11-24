@@ -340,7 +340,7 @@ async function handleRegister() {
   }
 }
 
-/* ===== NAV ===== */
+
 function goToLogin() {
   router.push('/login')
 }
@@ -477,10 +477,5 @@ input:focus {
   margin-bottom: 16px;
   font-size: 14px;
 }
-/* Responsive */
-@media (max-width: 480px) {
-  .register-card { padding: 20px; }
-  .input { padding: 10px 35px 10px 12px; }
-  .eye { right: 10px; }
-}
+
 </style>

@@ -241,7 +241,7 @@ watch(
   background: #fff;
 }
 
-/* ---------- Banner (fade) ---------- */
+/*  Banner (fade) */
 .banner {
   width: 100%;
   height: 320px;
@@ -288,7 +288,7 @@ watch(
   transform: scale(1.2);
 }
 
-/* ---------- Danh mục ---------- */
+/*  Danh mục */
 .category {
   max-width: 1200px;
   margin-left: 20px;
@@ -339,31 +339,9 @@ watch(
   color: #333;
 }
 
-/* Tablet */
-@media (max-width: 1024px) {
-  .category__list {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
-  }
-}
 
-/* Mobile */
-@media (max-width: 640px) {
-  .category__list {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 16px;
-    padding-bottom: 10px;
-    scroll-snap-type: x mandatory;
-  }
-  .category__item {
-    flex: 0 0 150px;
-    scroll-snap-align: center;
-  }
-}
 
-/* ---------- Gợi ý thêm ---------- */
+/* Gợi ý thêm  */
 .more-btn {
   text-align: center;
   margin: 28px 0 48px;
@@ -383,12 +361,12 @@ watch(
   background: #3c69d1;
 }
 
-/* ---------- Footer ---------- */
+/* Footer */
 footer {
   margin-top: auto;
 }
 
-/* ---------- Sản phẩm ---------- */
+/* Sản phẩm */
 .product {
   max-width: 1200px;
   margin: 40px auto;
@@ -412,7 +390,7 @@ footer {
 }
 
 
-/* ---------- State ---------- */
+/*State */
 .state {
   text-align: center;
   color: #4b5563;

@@ -162,7 +162,7 @@
         </div>
       </section>
 
-      <!-- BIẾN THỂ – giống ProductCreate -->
+      <!-- BIẾN THỂ -->
       <section class="pc-block">
         <h2 class="pc-block-title">Biến thể</h2>
 
@@ -247,14 +247,14 @@
             + Thêm biến thể
           </button>
 
-          <!-- BẢNG BIẾN THỂ (đã trộn) -->
+          <!-- BẢNG BIẾN THỂ -->
           <div class="pc-variant-card">
             <div class="pc-variant-top">
               <div class="pc-select-wrap pc-select-small">
                 <select v-model="filterVariant" class="pc-select">
                   <option value="">Tất cả biến thể</option>
                   <option v-for="row in variants" :key="row.id" :value="row.id">
-                    {{ row.name }}
+                    {{ formatVariantName(row) }}
                   </option>
                 </select>
               </div>
@@ -268,15 +268,17 @@
                     <th class="pc-col-name">{{ variantHeaderLabel }}</th>
                     <th class="pc-col-price">Giá vốn</th>
                     <th class="pc-col-price">Giá bán</th>
+                    <th class="pc-col-price">Số lượng</th>
                     <th class="pc-col-action"></th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  <tr v-for="row in filteredVariantRows" :key="row.id">
+                  <tr v-for="row in filteredVariantRows" :key="row.localId">
                     <td class="pc-cell-center">
                       <input type="checkbox" class="pc-checkbox" />
                     </td>
+
                     <td class="pc-cell-name">
                       {{
                         row.color && row.size
@@ -296,6 +298,7 @@
                         <span class="pc-price-suffix">đ</span>
                       </div>
                     </td>
+
                     <td>
                       <div class="pc-price-input-wrap">
                         <input
@@ -307,14 +310,26 @@
                         <span class="pc-price-suffix">đ</span>
                       </div>
                     </td>
+
+                    <!-- SỐ LƯỢNG -->
+                    <td>
+                      <div class="pc-price-input-wrap">
+                        <input
+                          v-model.number="row.stock"
+                          type="number"
+                          min="0"
+                          class="pc-input-sm pc-price-input"
+                        />
+                      </div>
+                    </td>
+
                     <td class="pc-cell-center">
                       <button
                         type="button"
                         class="pc-icon-btn"
                         aria-label="Xoá biến thể"
-                        @click="removeVariantRow(row.id)"
+                        @click="removeVariantRow(row.localId)"
                       >
-                        <!-- icon thùng rác -->
                         <svg
                           width="30"
                           height="30"
@@ -335,7 +350,7 @@
 
                   <!-- EMPTY -->
                   <tr v-if="!filteredVariantRows.length">
-                    <td colspan="5" class="pc-empty-cell">
+                    <td colspan="6" class="pc-empty-cell">
                       <div class="pc-empty-inner">
                         <p>Tạo biến thể của bạn</p>
                       </div>
@@ -370,6 +385,17 @@
                         <span class="pc-price-suffix">đ</span>
                       </div>
                     </td>
+                    <td>
+                      <div class="pc-price-input-wrap">
+                        <input
+                          v-model.number="allStock"
+                          type="number"
+                          min="0"
+                          class="pc-input-sm pc-price-input"
+                          @input="applyAllStock"
+                        />
+                      </div>
+                    </td>
                     <td></td>
                   </tr>
                 </tbody>
@@ -397,6 +423,7 @@
     </main>
   </div>
 </template>
+
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -469,11 +496,12 @@ const variantForms = ref([
 ]);
 
 /** Các dòng trong bảng biến thể */
-const variants = ref([]); // { localId, id(backend), color, size, price, stock, imageUrl }
+const variants = ref([]); // { localId, id(backend), color, size, costPrice, salePrice, stock, imageUrl }
 const deletedVariantIds = ref([]);
 const filterVariant = ref("");
-const allCost = ref(null); // dùng cho “Giá vốn” – tạm để FE, backend có thể ignore
-const allSale = ref(null); // dùng cho “Giá bán” = price gửi lên backend
+const allCost = ref(null);
+const allSale = ref(null);
+const allStock = ref(null);
 
 const savedVariantForms = computed(() =>
   variantForms.value.filter((v) => v.saved && v.values.length)
@@ -517,7 +545,7 @@ const initVariantFormsFromBackend = (backendVariants) => {
       name: "Màu",
       valuesText: values.join(", "),
       values,
-      saved: true, // đã có dữ liệu -> hiển thị chip giống lúc tạo
+      saved: true,
     });
   }
 
@@ -559,8 +587,8 @@ const rebuildVariantRows = () => {
     oldMap.set(key, v);
   });
 
-  const first = saved[0]; // nhóm 1 (giả định Màu)
-  const second = saved[1]; // nhóm 2 (giả định Size, có thể undefined)
+  const first = saved[0];
+  const second = saved[1];
 
   const colors = first?.values || [];
   const sizes = second?.values?.length ? second.values : [null];
@@ -577,7 +605,8 @@ const rebuildVariantRows = () => {
         id: existed?.id ?? null,
         color,
         size,
-        price: existed?.price ?? 0,
+        costPrice: existed?.costPrice ?? 0,
+        salePrice: existed?.salePrice ?? 0,
         stock: existed?.stock ?? 0,
         imageUrl: existed?.imageUrl ?? null,
       });
@@ -620,7 +649,7 @@ const removeVariantForm = (index) => {
   rebuildVariantRows();
 };
 
-/* Lọc bảng – tạm bỏ lọc theo id, chỉ trả lại toàn bộ */
+/* Lọc bảng – hiện đang trả lại toàn bộ */
 const filteredVariantRows = computed(() => variants.value);
 
 /* Xoá một dòng variant trong bảng */
@@ -634,7 +663,6 @@ const removeVariantRow = (localId) => {
 
 /* Cài giá chung cho tất cả */
 const applyAllCost = () => {
-  // chỉ set trên FE, backend hiện tại không có field costPrice/importPrice
   variants.value.forEach((r) => {
     r.costPrice = allCost.value || 0;
   });
@@ -642,7 +670,13 @@ const applyAllCost = () => {
 
 const applyAllSale = () => {
   variants.value.forEach((r) => {
-    r.price = allSale.value || 0;
+    r.salePrice = allSale.value || 0;
+  });
+};
+
+const applyAllStock = () => {
+  variants.value.forEach((r) => {
+    r.stock = allStock.value || 0;
   });
 };
 
@@ -654,7 +688,7 @@ const fetchProduct = async () => {
   try {
     const res = await request(`/products/${productId}`, { method: "GET" });
     const apiData = res.data ?? res;
-    const p = apiData.data || apiData; // theo JSON bạn gửi
+    const p = apiData.data || apiData;
 
     form.value.name = p.name ?? "";
     form.value.description = p.description ?? "";
@@ -672,19 +706,18 @@ const fetchProduct = async () => {
         : `${API_BASE_URL}${mainImage}`;
     }
 
-    // Dựng variants từ backend
     const backendVariants = Array.isArray(p.variants) ? p.variants : [];
     variants.value = backendVariants.map((v) => ({
       localId: seed++,
       id: v.id,
       color: v.color,
       size: v.size,
-      price: v.price ?? 0,
+      costPrice: v.costPrice ?? 0,
+      salePrice: v.price ?? 0,
       stock: v.stock ?? 0,
       imageUrl: v.imageUrl || null,
     }));
 
-    // Dựng form “Màu/Size” phía trên
     initVariantFormsFromBackend(backendVariants);
   } catch (err) {
     console.error("Lỗi load product:", err);
@@ -718,19 +751,17 @@ const onSubmit = async () => {
       const body = {
         color: v.color || null,
         size: v.size || null,
-        price: v.price ?? 0,
+        price: v.salePrice ?? v.price ?? 0,
         stock: v.stock ?? 0,
         imageUrl: v.imageUrl,
       };
 
       if (v.id) {
-        // update
         await request(`/products/${productId}/variants/${v.id}`, {
           method: "PUT",
           data: body,
         });
       } else {
-        // create mới
         const createdRes = await request(`/products/${productId}/variants`, {
           method: "POST",
           data: body,
@@ -741,7 +772,7 @@ const onSubmit = async () => {
       }
     }
 
-    // 3. Xoá những variant đã bị remove trong UI
+    // 3. Xoá những variant đã bị remove
     for (const id of deletedVariantIds.value) {
       await request(`/products/${productId}/variants/${id}`, {
         method: "DELETE",
@@ -767,7 +798,6 @@ onMounted(async () => {
   await Promise.all([fetchCategories(), fetchProduct()]);
 });
 </script>
-
 
 <style scoped>
 /* PAGE */
@@ -1212,7 +1242,7 @@ onMounted(async () => {
 }
 
 .pc-col-price {
-  width: 180px;
+  width: 160px;
 }
 
 .pc-col-action {

@@ -159,7 +159,7 @@
         <p v-else class="desc__empty">Chưa có mô tả chi tiết cho sản phẩm này.</p>
       </section>
 
-      <!-- =================== ĐÁNH GIÁ SẢN PHẨM =================== -->
+      <!-- ĐÁNH GIÁ SẢN PHẨM -->
       <section class="reviews">
         <h2 class="reviews__title">ĐÁNH GIÁ SẢN PHẨM</h2>
 
@@ -407,7 +407,7 @@ async function performCartAction(redirectToCart = false) {
 
 function addToCart() { performCartAction(false); }
 
-/* >>> MUA NGAY: điều hướng thẳng sang checkout, chỉ hiển thị sản phẩm vừa thêm <<< */
+/*  MUA NGAY: điều hướng thẳng sang checkout, chỉ hiển thị sản phẩm vừa thêm <<< */
 async function buyNow() {
   if (!isLoggedIn.value) {
     actionStatus.value = { type: "warning", message: "Vui lòng đăng nhập để mua hàng." };
@@ -425,7 +425,7 @@ async function buyNow() {
 
   actionLoading.value = true;
   try {
-    await addItem(variantId, safeQty); // ✅ thêm sản phẩm vào giỏ
+    await addItem(variantId, safeQty); //  thêm sản phẩm vào giỏ
     
     // Lấy giỏ hàng để tìm id của item vừa mới thêm
     await fetchCart();
@@ -450,7 +450,7 @@ async function buyNow() {
 }
 
 
-/* ===== Load sản phẩm ===== */
+/*  Load sản phẩm  */
 async function loadProduct() {
   loading.value = true;
   try {
@@ -468,7 +468,7 @@ async function loadProduct() {
   }
 }
 
-/* ====================== PHẦN REVIEW ====================== */
+/*  PHẦN REVIEW  */
 const reviews = ref([]);
 const page = ref(1);
 const pageSize = 3;
@@ -567,7 +567,7 @@ function go(p) {
   loadReviews();
 }
 
-/* ===== Mounted & watchers ===== */
+/*  Mounted & watchers  */
 onMounted(() => {
   loadProduct();
   loadReviews();
@@ -625,9 +625,7 @@ watch([color, size], () => {
   gap: 200px;
   align-items: start;
 }
-@media (max-width: 992px) {
-  .grid { grid-template-columns: 1fr; }
-}
+
 
 /* ===== Ảnh chính ===== */
 .main-img {
@@ -974,9 +972,6 @@ watch([color, size], () => {
 }
 .page-nav:disabled { opacity: .45; cursor: not-allowed; }
 
-/* Responsive */
-@media (max-width: 640px) {
-  .review-card { grid-template-columns: 1fr; gap: 12px; }
-  .review-photo { width: 64px; height: 64px; justify-self: start; }
-}
+
+
 </style>
