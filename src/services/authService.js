@@ -34,7 +34,14 @@ export async function forgotPassword(payload) {
   });
   return raw;
 }
-
+export async function resetPassword(payload) {
+  const { raw } = await request("/auth/reset-password", {
+    method: "POST",
+    data: payload,
+    auth: false,
+  });
+  return raw;
+}
 export async function verifyResetCode(payload) {
   const { raw } = await request("/auth/verify-reset-code", {
     method: "POST",

@@ -23,22 +23,31 @@
       <section class="pc-block pc-block--full">
         <h2 class="pc-block-title">Ảnh</h2>
 
-        <label class="pc-upload">
+        <div class="pc-upload">
           <input
+            ref="fileInput"
             type="file"
             accept="image/*"
+            multiple
             class="pc-upload-input"
             @change="onFileChange"
           />
 
-          <div v-if="imagePreview" class="pc-upload-preview">
-            <img :src="imagePreview" alt="Ảnh sản phẩm" />
-          </div>
+          <div class="pc-upload-gallery">
+            <div v-if="!imageFiles.length" class="pc-upload-placeholder">
+              <span class="pc-upload-text">Tải ảnh lên</span>
+            </div>
 
-          <div v-else class="pc-upload-placeholder">
-            <span class="pc-upload-text">Tải ảnh lên</span>
+            <div v-else class="pc-thumbs">
+              <div v-for="(f, i) in imageFiles" :key="i" class="pc-thumb">
+                <img :src="f._preview || ''" alt="thumb" />
+                <button type="button" class="pc-thumb-remove" @click="removeImage(i)">×</button>
+              </div>
+
+              <button type="button" class="pc-thumb-add" @click="openFileDialog">+ Thêm ảnh</button>
+            </div>
           </div>
-        </label>
+        </div>
       </section>
 
       <!-- ============ GRID 2 CỘT ============ -->
@@ -78,6 +87,14 @@
                 class="pc-input"
                 placeholder="VD: 120000"
               />
+            </div>
+
+            <div class="pc-field">
+              <label class="pc-label">Hiển thị sản phẩm</label>
+              <label style="display:inline-flex; align-items:center; gap:8px;">
+                <input type="checkbox" v-model="form.isActive" />
+                <span>{{ form.isActive ? 'Hiện' : 'Ẩn' }}</span>
+              </label>
             </div>
           </div>
         </div>
@@ -313,17 +330,53 @@ const form = ref({
   description: "",
   categoryId: "",
   price: null,
+  isActive: true,
 });
 
 /* ========= ẢNH ========= */
 const imagePreview = ref("");
-const imageFile = ref(null);
+const imageFiles = ref([]);
+const fileInput = ref(null);
+
+const openFileDialog = () => {
+  if (fileInput.value && typeof fileInput.value.click === "function") fileInput.value.click();
+};
 
 const onFileChange = (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  imageFile.value = file;
-  imagePreview.value = URL.createObjectURL(file);
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+
+  // attach preview URL for thumbnails and keep original File
+  const withPreview = files.map((f) => {
+    try {
+      f._preview = URL.createObjectURL(f);
+    } catch {}
+    return f;
+  });
+
+  // Cộng dồn ảnh cũ + ảnh mới
+  imageFiles.value = [...imageFiles.value, ...withPreview];
+
+  // Nếu chưa có preview lớn thì dùng ảnh đầu tiên
+  if (!imagePreview.value && withPreview.length) {
+    imagePreview.value = withPreview[0]._preview;
+  }
+
+  // Reset input để lần sau vẫn chọn được cùng file nếu cần
+  e.target.value = "";
+};
+
+const removeImage = (index) => {
+  const f = imageFiles.value[index];
+  if (f && f._preview) {
+    try { URL.revokeObjectURL(f._preview); } catch {}
+  }
+  imageFiles.value.splice(index, 1);
+  if (!imageFiles.value.length) {
+    imagePreview.value = "";
+  } else {
+    imagePreview.value = imageFiles.value[0]._preview || "";
+  }
 };
 
 /* ========= DANH MỤC ========= */
@@ -451,21 +504,6 @@ const applyAllSale = () => {
   variants.value.forEach((r) => (r.salePrice = allSale.value || 0));
 };
 
-/* ========= UPLOAD ẢNH ========= */
-const uploadProductImage = async () => {
-  if (!imageFile.value) return null;
-
-  const formData = new FormData();
-  formData.append("image", imageFile.value);
-
-  const { data } = await request("/uploads/product-image", {
-    method: "POST",
-    data: formData,
-  });
-
-  return data?.url || null;
-};
-
 /* ========= TỰ ĐỘNG LƯU BIẾN THỂ ========= */
 const normalizeVariantFormsBeforeSubmit = () => {
   if (variants.value.length) return;
@@ -512,38 +550,36 @@ const handleCreate = async () => {
     return;
   }
 
-  // Upload ảnh
-  let imageUrl = null;
+  // Chuẩn bị FormData (multipart/form-data)
+  const formData = new FormData();
+  formData.append("name", form.value.name.trim());
+  formData.append("description", form.value.description.trim());
+  formData.append("categoryId", String(form.value.categoryId));
+  formData.append("price", String(form.value.price));
+  // stock tổng có thể để 0, backend sẽ dùng từng biến thể
+  formData.append("stock", "0");
+
+  const variantsPayload = validVariantRows.map((v) => ({
+    color: v.color,
+    size: v.size,
+    price: v.salePrice ?? form.value.price,
+    stock: 0,
+  }));
+
+  formData.append("variants", JSON.stringify(variantsPayload));
+
+  // visibility
+  formData.append("isActive", String(form.value.isActive));
+
+  // Gắn nhiều ảnh (nếu có)
+  imageFiles.value.forEach((file) => {
+    formData.append("images", file);
+  });
+
   try {
-    imageUrl = await uploadProductImage();
-  } catch (err) {
-    alert("Upload ảnh thất bại, vui lòng thử lại");
-    return;
-  }
-
-  // Payload
-  const payload = {
-    name: form.value.name.trim(),
-    description: form.value.description.trim(),
-    categoryId: form.value.categoryId,
-    price: form.value.price,
-    variants: validVariantRows.map((v, idx) => ({
-      color: v.color,
-      size: v.size,
-      price: v.salePrice ?? form.value.price,
-      stock: 0,
-      imageUrl: imageUrl,
-    })),
-  };
-
-  if (imageUrl) payload.imageUrl = imageUrl;
-
-  try {
-    console.log("CREATE PRODUCT PAYLOAD:", payload);
-
     const res = await request("/products", {
       method: "POST",
-      data: payload,
+      data: formData,
     });
 
     console.log("CREATE PRODUCT RESPONSE:", res);
@@ -665,6 +701,13 @@ const goBack = () => router.back();
   font-weight: 500;
   color: #3b82f6;
 }
+
+.pc-upload-gallery { padding: 8px; }
+.pc-thumbs { display: flex; gap: 10px; align-items: center; }
+.pc-thumb { position: relative; width: 220px; height: 120px; border-radius: 8px; overflow: hidden; }
+.pc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pc-thumb-remove { position: absolute; right: 6px; top: 6px; background: rgba(0,0,0,0.6); color: #fff; border: none; width: 26px; height: 26px; border-radius: 999px; cursor: pointer; }
+.pc-thumb-add { padding: 10px 14px; border-radius: 8px; border: 1px dashed #e5e7eb; background: #fff; cursor: pointer; }
 
 /* GRID 2 CỘT */
 .pc-grid-2 {

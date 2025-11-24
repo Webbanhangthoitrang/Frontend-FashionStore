@@ -48,101 +48,109 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { verifyResetOtp, resendResetOtp } from '../../services/authService'
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { verifyResetOtp, resendResetOtp } from "../../services/authService";
 
-const router = useRouter()
+const router = useRouter();
 
-const email    = ref('')
-const code     = ref('')
-const loading  = ref(false)
-const error    = ref('')
-const success  = ref('')
-const cooldown = ref(0)
-let tick = null
+const email    = ref("");
+const code     = ref("");
+const loading  = ref(false);
+const error    = ref("");
+const success  = ref("");
+const cooldown = ref(0);
+let tick = null;
 
 onMounted(() => {
   // Lấy email từ bước quên mật khẩu
-  email.value = sessionStorage.getItem('reset_email') || ''
+  email.value = sessionStorage.getItem("reset_email") || "";
 
   // Không có email thì quay về bước nhập email
   if (!email.value) {
-    router.replace({ name: 'ForgotPassword' })
+    router.replace({ name: "ForgotPassword" });
   }
-})
+});
 
-const pageTitle = computed(() => 'Quên mật khẩu')
-// ẩn email
+const pageTitle = computed(() => "Quên mật khẩu");
+
+// Ẩn email
 const maskedEmail = computed(() => {
-  const [name, domain] = (email.value || '').split('@')
-  if (!name || !domain) return email.value
-  return name.slice(0, 2) + '***@' + domain
-})
-// nội dung mô tả
-const hintText = computed(() =>
-  `Kiểm tra ${maskedEmail.value} và nhập mã xác nhận để đặt lại mật khẩu.`
-)
+  const [name, domain] = (email.value || "").split("@");
+  if (!name || !domain) return email.value;
+  return name.slice(0, 2) + "***@" + domain;
+});
+
+// Nội dung mô tả
+const hintText = computed(
+  () => `Kiểm tra ${maskedEmail.value} và nhập mã xác nhận để đặt lại mật khẩu.`
+);
+
 // Đếm ngược gửi lại OTP
 function startCooldown(sec = 60) {
-  cooldown.value = sec
-  clearInterval(tick)
+  cooldown.value = sec;
+  clearInterval(tick);
   tick = setInterval(() => {
-    cooldown.value -= 1
-    if (cooldown.value <= 0) clearInterval(tick)
-  }, 1000)
+    cooldown.value -= 1;
+    if (cooldown.value <= 0) clearInterval(tick);
+  }, 1000);
 }
 
 async function handleVerify() {
-  // xóa thông báo cũ
-  error.value = ''
-  success.value = ''
-  loading.value = true
+  error.value = "";
+  success.value = "";
+  loading.value = true;
 
   try {
     const res = await verifyResetOtp({
       email: email.value,
-      otp : code.value,
-    })
+      otp: code.value,
+    });
 
-    // lấy token cho bước đặt lại mật khẩu
-    const resetToken = res?.data?.resetToken || res?.resetToken
-    if (resetToken) sessionStorage.setItem('reset_token', resetToken)
+    // Lấy token (nếu BE trả về) cho bước đặt lại mật khẩu
+    const resetToken = res?.data?.resetToken || res?.resetToken;
+    if (resetToken) sessionStorage.setItem("reset_token", resetToken);
 
-    // gắn cờ cho guard ResetPassword
-    sessionStorage.setItem('reset_verified', '1')
+    // Gắn cờ cho guard ResetPassword
+    sessionStorage.setItem("reset_verified", "1");
 
-    success.value = 'Mã hợp lệ. Vui lòng đặt mật khẩu mới.'
-     setTimeout(() => {
-  router.replace({ 
-    name: 'reset-password',     
-    query: { flow: 'reset' }  
-  })
-}, 600)
+    // LƯU LUÔN EMAIL + OTP ĐỂ DÙNG Ở MÀN RESET
+    sessionStorage.setItem("reset_email", email.value);
+    sessionStorage.setItem("reset_otp", code.value);
 
+    success.value = "Mã hợp lệ. Vui lòng đặt mật khẩu mới.";
+
+    setTimeout(() => {
+      router.replace({
+        name: "reset-password",
+        query: { flow: "reset" },
+      });
+    }, 600);
   } catch (e) {
-    error.value = e?.message || 'Mã OTP không đúng hoặc đã hết hạn.'
+    error.value = e?.message || "Mã OTP không đúng hoặc đã hết hạn.";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function handleResend() {
-  error.value = ''
-  success.value = ''
-  loading.value = true
-  try {
-    await resendResetOtp({ email: email.value })
+  error.value = "";
+  success.value = "";
+  loading.value = true;
 
-    success.value = 'Đã gửi lại mã. Vui lòng kiểm tra email.'
-    startCooldown(60)
+  try {
+    await resendResetOtp({ email: email.value });
+
+    success.value = "Đã gửi lại mã. Vui lòng kiểm tra email.";
+    startCooldown(60);
   } catch (e) {
-    error.value = e?.message || 'Không gửi lại được mã. Thử lại sau.'
+    error.value = e?.message || "Không gửi lại được mã. Thử lại sau.";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
+
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Khula:wght@400;600;700&display=swap');
