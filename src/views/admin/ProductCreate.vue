@@ -77,25 +77,8 @@
               ></textarea>
             </div>
 
-            <!-- 👇 THÊM GIÁ SẢN PHẨM -->
-            <div class="pc-field">
-              <label class="pc-label">Giá sản phẩm</label>
-              <input
-                v-model.number="form.price"
-                type="number"
-                min="0"
-                class="pc-input"
-                placeholder="VD: 120000"
-              />
-            </div>
+            
 
-            <div class="pc-field">
-              <label class="pc-label">Hiển thị sản phẩm</label>
-              <label style="display:inline-flex; align-items:center; gap:8px;">
-                <input type="checkbox" v-model="form.isActive" />
-                <span>{{ form.isActive ? 'Hiện' : 'Ẩn' }}</span>
-              </label>
-            </div>
           </div>
         </div>
 
@@ -253,7 +236,7 @@
                       <input
                         v-model.number="row.salePrice"
                         type="number"
-                        min="0"
+                        readonly
                         class="pc-input pc-input-sm"
                       />
                     </td>
@@ -338,7 +321,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { request } from "../../services/http";
 
@@ -349,7 +332,6 @@ const form = ref({
   name: "",
   description: "",
   categoryId: "",
-  price: null,
   isActive: true,
 });
 
@@ -559,15 +541,9 @@ const handleCreate = async () => {
     return;
   }
 
-  if (form.value.price == null || form.value.price === "") {
-    alert("Vui lòng nhập giá sản phẩm");
-    return;
-  }
-
-  // Tự động build variants
+  // Build lại biến thể
   normalizeVariantFormsBeforeSubmit();
 
-  // CHỈ lấy biến thể hợp lệ
   const validVariantRows = variants.value.filter(
     (v) => v.color || v.size
   );
@@ -577,14 +553,13 @@ const handleCreate = async () => {
     return;
   }
 
-  // Kiểm tra xem có biến thể nào có giá hợp lệ không
   const hasValidPrice = validVariantRows.some((v) => {
-    const price = v.salePrice ?? v.price ?? form.value.price;
+    const price = v.salePrice ?? v.price ?? 0;
     return price && price > 0;
   });
 
   if (!hasValidPrice) {
-    alert("Vui lòng nhập giá cho ít nhất một biến thể hoặc sử dụng 'Cài đặt giá cho tất cả'");
+    alert("Vui lòng nhập giá cho ít nhất một biến thể");
     return;
   }
 
@@ -593,33 +568,33 @@ const handleCreate = async () => {
     return;
   }
 
-  // Chuẩn bị FormData (multipart/form-data)
+  // Tính price gốc để gửi lên (BE yêu cầu)
+  const prices = validVariantRows
+    .map((v) => v.salePrice ?? 0)
+    .filter((p) => p > 0);
+
+  const basePrice = prices.length ? Math.min(...prices) : 0;
+
+  // Tạo formData
   const formData = new FormData();
   formData.append("name", form.value.name.trim());
   formData.append("description", form.value.description.trim());
   formData.append("categoryId", String(form.value.categoryId));
-  formData.append("price", String(form.value.price));
-  // stock tổng có thể để 0, backend sẽ dùng từng biến thể
+  formData.append("price", String(basePrice)); // product price
   formData.append("stock", "0");
+  formData.append("isActive", "true");
 
-  const variantsPayload = validVariantRows.map((v) => {
-    const variantPrice = v.salePrice ?? v.price ?? form.value.price;
-    const variantStock = v.stock ?? 0;
-    
-    return {
-      color: v.color || null,
-      size: v.size || null,
-      price: Number(variantPrice) || 0,
-      stock: Number(variantStock) || 0,
-    };
-  });
+  const variantsPayload = validVariantRows.map((v) => ({
+    color: v.color || null,
+    size: v.size || null,
+    costPrice: Number(v.costPrice) || 0, 
+    price: Number(v.salePrice) || 0,
+    stock: Number(v.stock) || 0,
+  }));
 
   formData.append("variants", JSON.stringify(variantsPayload));
 
-  // visibility
-  formData.append("isActive", String(form.value.isActive));
-
-  // Gắn nhiều ảnh (nếu có)
+  // Ảnh
   imageFiles.value.forEach((file) => {
     formData.append("images", file);
   });
@@ -630,7 +605,6 @@ const handleCreate = async () => {
       data: formData,
     });
 
-    console.log("CREATE PRODUCT RESPONSE:", res);
     alert("Tạo sản phẩm thành công!");
     router.push("/admin/products");
   } catch (err) {
@@ -639,8 +613,21 @@ const handleCreate = async () => {
   }
 };
 
+
 /* ========= BACK ========= */
 const goBack = () => router.back();
+
+watch(
+  () => variants.value,
+  (newVariants) => {
+    newVariants.forEach((variant) => {
+      if (variant.costPrice) {
+        variant.salePrice = Math.round(variant.costPrice * 1.5);
+      }
+    });
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

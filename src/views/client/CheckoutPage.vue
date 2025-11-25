@@ -368,7 +368,7 @@ async function placeOrder () {
     const res = await createOrder(payload);
 
     // Sau khi đặt hàng thành công, chuyển đến trang "Đơn mua" của tôi
-    alert('Đặt hàng thành công! 🎉');
+    alert('Đặt hàng thành công! ');
     router.push({ name: 'account.orders' });
   } catch (e) {
     const msg = e?.response?.data?.message || e?.message || 'Đặt hàng thất bại. Vui lòng thử lại!'

@@ -303,11 +303,10 @@
                       <div class="pc-price-input-wrap">
                         <input
                           v-model.number="row.salePrice"
-                          type="text"
-                          inputmode="decimal"
+                          type="number"
+                          readonly
                           class="pc-input-sm pc-price-input"
                         />
-                        <span class="pc-price-suffix">đ</span>
                       </div>
                     </td>
 
@@ -425,7 +424,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { request, API_BASE_URL } from "../../services/http";
 
@@ -793,6 +792,19 @@ const onSubmit = async () => {
 const goBack = () => {
   router.back();
 };
+
+// Watch for changes in costPrice and update salePrice
+watch(
+  () => variants.value,
+  (newVariants) => {
+    newVariants.forEach((variant) => {
+      if (variant.costPrice) {
+        variant.salePrice = Math.round(variant.costPrice * 1.5);
+      }
+    });
+  },
+  { deep: true }
+);
 
 onMounted(async () => {
   await Promise.all([fetchCategories(), fetchProduct()]);
